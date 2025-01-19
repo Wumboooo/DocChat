@@ -1,0 +1,23 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.DocChat" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/darkerblue</item>
+        <item name="colorPrimaryVariant">@color/darkblue</item>
+        <item name="colorSecondary">@color/skyblue</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:fontFamily">@font/poppins_regular</item>
+        <item name="android:statusBarColor">@color/darkerblue</item>
+        <item name="android:navigationBarColor">@color/darkerblue</item>
+
+        <!-- This sets the custom active item indicator background -->
+        <item name="bottomNavigationStyle">@style/CustomBottomNavigationStyle</item>
+    </style>
+
+    <style name="Theme.DocChat" parent="Base.Theme.DocChat" />
+
+    <!-- Style for Bottom Navigation to apply active indicator -->
+    <style name="CustomBottomNavigationStyle" parent="Widget.Material3.BottomNavigationView">
+        <item name="itemActiveIndicatorStyle">@drawable/rounded_background</item>
+    </style>
+</resources>

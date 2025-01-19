@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "172065803647",
+    "project_id": "docchat-187c2",
+    "storage_bucket": "docchat-187c2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:172065803647:android:7c10e6352a9b5aa3b3de4a",
+        "android_client_info": {
+          "package_name": "com.example.docchat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "172065803647-rnp352e5a7qmachqrt3o0i1lnnt2dmjs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.docchat",
+            "certificate_hash": "1fb317835701db4987952350490bd1cc8d534542"
+          }
+        },
+        {
+          "client_id": "172065803647-3p3kcotclai8u2d4hi650jaurvbujhd6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxvVxxKKuNtBoJ5uHMw1GtyOqkg4idrE0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "172065803647-3p3kcotclai8u2d4hi650jaurvbujhd6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
