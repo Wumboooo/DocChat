@@ -4,9 +4,12 @@
 
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
 
     <application
+        android:name=".DocChat"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -16,8 +19,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DocChat"
         tools:targetApi="31">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCVKFfhfUQzNdHxLKCEyoGvuPRmD83sWBQ" />
         <activity
-            android:name=".ProfileFormActivity"
+            android:name=".form.MapPickerActivity"
+            android:exported="false" />
+        <activity
+            android:name=".form.ProfileFormActivity"
+            android:exported="false" />
+        <activity
+            android:name=".form.OTPConfirmationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".login.LoginActivity"
             android:exported="false" />
         <activity
             android:name=".MainActivity"

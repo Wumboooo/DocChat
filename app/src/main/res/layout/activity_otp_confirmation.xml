@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/instructionText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Enter the OTP sent to your phone"
+        android:textSize="16sp"
+        android:layout_gravity="center" />
+
+    <EditText
+        android:id="@+id/otpEditText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Enter OTP"
+        android:inputType="number"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/confirmButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Confirm OTP"
+        android:layout_marginTop="16dp" />
+
+    <Button
+        android:id="@+id/resendButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Resend OTP"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/skipOtpButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Skip OTP"
+        android:layout_marginTop="16dp"
+        android:layout_gravity="center" />
+</LinearLayout>

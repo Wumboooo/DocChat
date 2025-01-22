@@ -6,67 +6,78 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <!-- EditText untuk Nama -->
+    <!-- Name Input -->
     <EditText
         android:id="@+id/nameEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Name"
-        android:inputType="textPersonName"/>
+        android:hint="Nama Lengkap"
+        android:inputType="textPersonName" />
 
-    <!-- RadioGroup untuk Gender -->
+    <!-- Gender Selection -->
     <RadioGroup
         android:id="@+id/rgGender"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <RadioButton
             android:id="@+id/rbMale"
-            android:text="Male"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"/>
+            android:text="Laki-laki" />
         <RadioButton
             android:id="@+id/rbFemale"
-            android:text="Female"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_width="wrap_content"/>
+            android:text="Perempuan" />
     </RadioGroup>
 
-    <!-- EditText untuk Nomor Telepon -->
+    <!-- Phone Number -->
     <EditText
         android:id="@+id/phoneNumberEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Phone Number"
-        android:inputType="phone"/>
+        android:hint="Nomor Telepon (e.g., +62XXXXXXXXXX)"
+        android:inputType="phone" />
 
-    <!-- Button untuk membuka DatePicker -->
+    <!-- Birthday Selection -->
+    <TextView
+        android:id="@+id/selectedDateTextView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:text="Pilih Tanggal Lahir" />
+
     <Button
         android:id="@+id/datePickerButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Select Birthday" />
+        android:text="Tentukan tanggal lahir" />
 
-    <!-- DatePicker (awalnya disembunyikan) -->
-    <DatePicker
-        android:id="@+id/datePicker"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:visibility="gone"/>
-
-    <!-- EditText untuk lokasi (menggunakan location picker) -->
+    <!-- Location Selection -->
     <EditText
-        android:id="@+id/locationEditText"
+        android:id="@+id/locationSearchField"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Location"
+        android:hint="Alamat"
+        android:padding="8dp"
         android:inputType="text" />
 
-    <!-- Button untuk menyimpan data -->
+    <Button
+        android:id="@+id/mapButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Tentukan lewat peta" />
+
+    <ListView
+        android:id="@+id/locationSuggestionsList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:divider="@android:color/darker_gray"
+        android:dividerHeight="1dp" />
+
     <Button
         android:id="@+id/saveButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Save" />
-
+        android:text="Simpan" />
 </LinearLayout>
-
