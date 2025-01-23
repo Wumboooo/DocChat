@@ -1,4 +1,4 @@
-package com.example.docchat.form
+package com.example.docchat.ui.form
 
 import android.Manifest
 import android.app.Activity
@@ -13,6 +13,9 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 class LocationHelper(
@@ -44,7 +47,7 @@ class LocationHelper(
     }
 
     // Fetch the current location
-    fun fetchCurrentLocation(callback: (String) -> Unit) {
+    suspend fun fetchCurrentLocation(callback: (String) -> Unit) {
         if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(
                 activity,
@@ -54,14 +57,32 @@ class LocationHelper(
             return
         }
 
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
+        withContext(Dispatchers.IO) {
+            val location = fusedLocationClient.lastLocation.await() // Requires `kotlinx-coroutines-play-services`
+            val address = if (location != null) {
                 val geocoder = Geocoder(activity, Locale.getDefault())
-                val address = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                geocoder.getFromLocation(location.latitude, location.longitude, 1)
                     ?.get(0)
-                    ?.getAddressLine(0) ?: "Unknown Location"
-                callback(address)
+                    ?.getAddressLine(0) ?: "Unable to fetch address"
+            } else {
+                "Location not available"
             }
+            callback(address)
+        }
+    }
+
+
+    fun checkAndRequestGpsPermission(onGranted: () -> Unit) {
+        if (!isGpsEnabled()) {
+            promptEnableGps()
+        } else if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                activity,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                ProfileFormActivity.GPS_PERMISSION_REQUEST_CODE
+            )
+        } else {
+            onGranted()
         }
     }
 

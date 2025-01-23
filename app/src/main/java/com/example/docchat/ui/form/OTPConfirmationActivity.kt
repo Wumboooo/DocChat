@@ -1,4 +1,4 @@
-package com.example.docchat.form
+package com.example.docchat.ui.form
 
 import android.content.Intent
 import android.os.Bundle
@@ -62,9 +62,7 @@ class OTPConfirmationActivity : AppCompatActivity() {
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Toast.makeText(this, "Phone number verified successfully", Toast.LENGTH_SHORT).show()
-                    val intent = Intent(this, MainActivity::class.java)
-                    startActivity(intent)
-                    finish()
+                    navigateToMain()
                 } else {
                     Toast.makeText(this, "Verification failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
@@ -102,6 +100,7 @@ class OTPConfirmationActivity : AppCompatActivity() {
 
     private fun navigateToMain() {
         val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         startActivity(intent)
         finish()
     }

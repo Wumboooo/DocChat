@@ -1,4 +1,4 @@
-package com.example.docchat.form
+package com.example.docchat.ui.form
 
 import android.app.Activity
 import android.content.Context
@@ -9,16 +9,45 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import java.util.concurrent.TimeUnit
 
 class FirebaseHelper(private val context: Context, private val auth: FirebaseAuth) {
 
-    fun startPhoneVerification(
-        phoneNumber: String,
+    fun saveUserProfileToFirestore(
+        userId: String,
         name: String,
         gender: String,
+        phoneNumber: String,
         birthday: String,
         location: String,
+        onComplete: () -> Unit // Callback
+    ) {
+        val db = FirebaseFirestore.getInstance()
+        val userData = mapOf(
+            "name" to name,
+            "gender" to gender,
+            "phone" to phoneNumber,
+            "birthday" to birthday,
+            "location" to location,
+            "profileCompleted" to true
+        )
+
+        db.collection("users").document(userId)
+            .set(userData, SetOptions.merge())
+            .addOnSuccessListener {
+                Toast.makeText(context, "Profile saved successfully!", Toast.LENGTH_SHORT).show()
+                onComplete() // Panggil callback setelah selesai
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(context, "Failed to save profile: ${e.message}", Toast.LENGTH_SHORT).show()
+                onComplete() // Tetap panggil callback untuk sembunyikan loading
+            }
+    }
+
+    fun startPhoneVerification(
+        phoneNumber: String,
         activity: Activity
     ) {
         val options = PhoneAuthOptions.newBuilder(auth)
@@ -37,10 +66,7 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
                 override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
                     val intent = Intent(context, OTPConfirmationActivity::class.java).apply {
                         putExtra("verificationId", verificationId)
-                        putExtra("name", name)
-                        putExtra("gender", gender)
-                        putExtra("birthday", birthday)
-                        putExtra("location", location)
+                        putExtra("phoneNumber", phoneNumber)
                     }
                     context.startActivity(intent)
                 }

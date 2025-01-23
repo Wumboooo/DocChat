@@ -1,4 +1,4 @@
-package com.example.docchat.form
+package com.example.docchat.ui.form
 
 import android.Manifest
 import android.app.Activity
@@ -11,7 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.example.docchat.R
-import com.example.docchat.form.ProfileFormActivity.Companion.GPS_PERMISSION_REQUEST_CODE
+import com.example.docchat.ui.form.ProfileFormActivity.Companion.GPS_PERMISSION_REQUEST_CODE
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap

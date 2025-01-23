@@ -1,4 +1,4 @@
-package com.example.docchat.form
+package com.example.docchat.ui.form
 
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
