@@ -20,15 +20,12 @@
         android:theme="@style/Theme.DocChat"
         tools:targetApi="31">
         <activity
-            android:name=".ui.profile.ProfileFragment"
-            android:exported="false" />
-        <activity
-            android:name=".ui.home.HomeFragment"
+            android:name=".ui.chat.ChatActivity"
             android:exported="false" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyCVKFfhfUQzNdHxLKCEyoGvuPRmD83sWBQ" />
+            android:value="@string/GEO_API_KEY" />
 
         <activity
             android:name=".ui.form.MapPickerActivity"

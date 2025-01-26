@@ -1,13 +1,26 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("kotlin-parcelize")
     id("com.google.gms.google-services")
+    id("com.google.dagger.hilt.android")
+    id("kotlin-kapt")
 }
 
 android {
     namespace = "com.example.docchat"
     compileSdk = 35
+
+    // Membaca API Key dari local.properties
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(localPropertiesFile.inputStream())
+    }
+    val geoApiKey = localProperties.getProperty("GEO_API_KEY") ?: ""
+    val webApiKey = localProperties.getProperty("WEB_API_KEY") ?: ""
 
     defaultConfig {
         applicationId = "com.example.docchat"
@@ -17,6 +30,11 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+//
+//        buildConfigField("String", "GEO_API_KEY", "\"$geoApiKey\"")
+//        buildConfigField("String", "WEB_API_KEY", "\"$webApiKey\"")
+//        resValue("string", "GEO_API_KEY", "\"$geoApiKey\"")
+//        resValue("string", "WEB_API_KEY", "\"$webApiKey\"")
     }
 
     buildTypes {
@@ -37,6 +55,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 }
 
@@ -74,6 +93,7 @@ dependencies {
     // room
     implementation("androidx.room:room-ktx:2.6.1")
     implementation("androidx.room:room-common:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
 
     // oauth2
     implementation("com.google.android.gms:play-services-auth:21.2.0")
@@ -114,5 +134,15 @@ dependencies {
     implementation("androidx.navigation:navigation-fragment-ktx:2.8.5")
     implementation("androidx.navigation:navigation-ui-ktx:2.8.5")
 
+    //paging3
+    implementation("androidx.paging:paging-runtime:3.3.5")
+    implementation("androidx.paging:paging-runtime-ktx:3.3.5")
 
+    implementation("com.google.dagger:hilt-android:2.49")
+    kapt("com.google.dagger:hilt-android-compiler:2.49")
+    implementation("androidx.hilt:hilt-navigation-fragment:1.2.0")
+    kapt("androidx.hilt:hilt-compiler:1.2.0")
+
+    // material
+    implementation("com.google.android.material:material:1.12.0")
 }

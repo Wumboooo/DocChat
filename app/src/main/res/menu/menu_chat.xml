@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/menu_forward"
+        android:title="Forward"
+        android:icon="@drawable/baseline_arrow_forward_24"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_end_session"
+        android:title="End Session"
+        android:icon="@drawable/baseline_app_blocking_24"
+        app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/menu_summary"
+        android:title="Summary"
+        android:icon="@drawable/baseline_assignment_24"
+        app:showAsAction="ifRoom" />
+</menu>

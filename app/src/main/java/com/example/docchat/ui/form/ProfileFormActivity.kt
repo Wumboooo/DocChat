@@ -6,7 +6,6 @@ import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.MenuItem
 import android.view.MotionEvent
 import android.widget.Button
@@ -23,7 +22,6 @@ import com.example.docchat.ui.login.LoginActivity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class ProfileFormActivity : AppCompatActivity() {
@@ -32,39 +30,19 @@ class ProfileFormActivity : AppCompatActivity() {
     private lateinit var locationHelper: LocationHelper
     private lateinit var datePickerHelper: DatePickerHelper
     private lateinit var firebaseHelper: FirebaseHelper
-
-    private lateinit var datePickerButton: Button
-    private lateinit var selectedDateTextView: TextView
-    private lateinit var mapButton: Button
-    private lateinit var saveButton: Button
-
     private lateinit var locationSearchField: EditText
-    private lateinit var selectedLocation: String
-
     private lateinit var progressDialog: AlertDialog
 
     private val mapPickerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val data = result.data
-            val selectedLocation = data?.getStringExtra("selected_address") ?: "No location selected"
-            locationSearchField.setText(selectedLocation)
-            this.selectedLocation = selectedLocation
+            result.data?.getStringExtra("selected_address")?.let {
+                locationSearchField.setText(it)
+            }
         }
     }
 
     private val gpsPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-        if (isGranted) {
-            lifecycleScope.launch {
-                locationHelper.fetchCurrentLocation { location ->
-                    lifecycleScope.launch(Dispatchers.Main) {
-                        locationSearchField.setText(location)
-                        selectedLocation = location
-                    }
-                }
-            }
-        } else {
-            Toast.makeText(this, "GPS permission is required to fetch location.", Toast.LENGTH_SHORT).show()
-        }
+        if (isGranted) fetchCurrentLocation() else showToast("GPS permission is required to fetch location.")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -72,36 +50,25 @@ class ProfileFormActivity : AppCompatActivity() {
         setContentView(R.layout.activity_profile_form)
 
         setupProgressDialog()
-        initializeFirebase()
-        initializeViews()
+        setupLocationField()
+        initializeHelpers()
         setupToolbar()
         setupListeners()
-
-        // Request GPS permission
         checkGpsAndRequestPermission()
-        setupLocationSearchField()
     }
 
     private fun setupProgressDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setView(R.layout.progress_dialog) // Buat layout XML dengan ProgressBar
-        builder.setCancelable(false)
-        progressDialog = builder.create()
+        progressDialog = AlertDialog.Builder(this)
+            .setView(R.layout.progress_dialog)
+            .setCancelable(false)
+            .create()
     }
 
-    private fun initializeFirebase() {
+    private fun initializeHelpers() {
         auth = FirebaseAuth.getInstance()
         locationHelper = LocationHelper(this, mapPickerLauncher)
         datePickerHelper = DatePickerHelper(this)
         firebaseHelper = FirebaseHelper(this, auth)
-    }
-
-    private fun initializeViews() {
-        datePickerButton = findViewById(R.id.datePickerButton)
-        selectedDateTextView = findViewById(R.id.selectedDateTextView)
-        mapButton = findViewById(R.id.mapButton)
-        saveButton = findViewById(R.id.saveButton)
-        locationSearchField = findViewById(R.id.locationSearchField)
     }
 
     private fun setupToolbar() {
@@ -113,86 +80,42 @@ class ProfileFormActivity : AppCompatActivity() {
     }
 
     private fun setupListeners() {
-        datePickerButton.setOnClickListener { datePickerHelper.showDatePicker(selectedDateTextView) }
-        mapButton.setOnClickListener { locationHelper.openMapPicker() }
-        saveButton.setOnClickListener { saveUserProfile() }
+        findViewById<Button>(R.id.datePickerButton).setOnClickListener {
+            datePickerHelper.showDatePicker(findViewById(R.id.selectedDateTextView))
+        }
+        findViewById<Button>(R.id.mapButton).setOnClickListener {
+            locationHelper.openMapPicker()
+        }
+        findViewById<Button>(R.id.saveButton).setOnClickListener {
+            saveUserProfile()
+        }
     }
 
-
-    // Handle back button press to log out and clear session
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> {
-                logOutAndClearSession()
+    private fun setupLocationField() {
+        val locationField = findViewById<EditText>(R.id.locationSearchField)
+        locationField.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP && isDrawableEndClicked(event, locationField)) {
+                requestLocationFromGps()
                 true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun logOutAndClearSession() {
-        // Sign out from Firebase
-        auth.signOut()
-
-        // Optionally, sign out from Google as well if using Google Sign-In
-        GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
-
-        // Navigate to LoginActivity
-        val intent = Intent(this, LoginActivity::class.java)
-        startActivity(intent)
-        finish() // End MainActivity to prevent back navigation
-        true
-    }
-
-    private fun setupLocationSearchField() {
-        if (!locationHelper.isGpsEnabled()) {
-            locationSearchField.error = "Enable GPS to fetch location"
-            locationHelper.promptEnableGps()
-        }
-
-        locationSearchField.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP) {
-                val drawableEnd = locationSearchField.compoundDrawablesRelative[2]
-                if (drawableEnd != null && event.rawX >= (locationSearchField.right - drawableEnd.bounds.width())) {
-                    // Handle GPS icon click
-                    requestLocationFromGps()
-                    // Call performClick to handle accessibility
-                    locationSearchField.performClick()
-                    return@setOnTouchListener true
-                }
-            }
-            false
-        }
-
-        locationSearchField.setOnClickListener {
-            // Ensure performClick is recognized for accessibility
-            Log.d("LocationSearchField", "EditText clicked")
+            } else false
         }
     }
 
     private fun checkGpsAndRequestPermission() {
-        lifecycleScope.launch {
-            locationHelper.fetchCurrentLocation { location ->
-                lifecycleScope.launch(Dispatchers.Main) {
-                    locationSearchField.setText(location)
-                    selectedLocation = location
-                }
-            }
-        }
+        if (!locationHelper.isGpsEnabled()) locationHelper.promptEnableGps()
+        else fetchCurrentLocation()
     }
 
     private fun requestLocationFromGps() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             gpsPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-            return
-        }
+        } else fetchCurrentLocation()
+    }
 
+    private fun fetchCurrentLocation() {
         lifecycleScope.launch {
             locationHelper.fetchCurrentLocation { location ->
-                lifecycleScope.launch(Dispatchers.Main) {
-                    locationSearchField.setText(location)
-                    selectedLocation = location
-                }
+                findViewById<EditText>(R.id.locationSearchField).setText(location)
             }
         }
     }
@@ -200,45 +123,70 @@ class ProfileFormActivity : AppCompatActivity() {
     private fun saveUserProfile() {
         val userId = auth.currentUser?.uid ?: return
         val name = findViewById<EditText>(R.id.nameEditText).text.toString().trim()
-        val phoneNumber = findViewById<EditText>(R.id.phoneNumberEditText).text.toString().trim()
-
-        // Validasi format nomor telepon
-        val phoneNumberPattern = "^(\\+62|0)\\d{8,12}$"
-        val regex = Regex(phoneNumberPattern)
-        if (!regex.matches(phoneNumber)) {
-            Toast.makeText(this, "Please enter a valid phone number (e.g., +62XXXXXXXXXX)", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+        val phone = findViewById<EditText>(R.id.phoneNumberEditText).text.toString().trim()
         val gender = when (findViewById<RadioGroup>(R.id.rgGender).checkedRadioButtonId) {
             R.id.rbMale -> "Male"
             R.id.rbFemale -> "Female"
             else -> "Not specified"
         }
+        val birthday = findViewById<TextView>(R.id.selectedDateTextView).text.toString().trim()
+        val location = findViewById<EditText>(R.id.locationSearchField).text.toString().trim()
 
-        val birthday = selectedDateTextView.text.toString().takeIf { it != "No date selected" } ?: "Not specified"
+        if (!validateFields(name, phone, gender, birthday, location)) return
 
-        if (name.isEmpty() || phoneNumber.isEmpty() || gender.isEmpty() || birthday == "Not specified" || selectedLocation.isEmpty()) {
-            Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
-            return
-        } else {
-            progressDialog.show() // Menampilkan loading bar
-            firebaseHelper.saveUserProfileToFirestore(
-                userId,
-                name,
-                gender,
-                phoneNumber,
-                birthday,
-                selectedLocation
-            ) {
-                // Callback setelah selesai
-                progressDialog.dismiss() // Sembunyikan loading bar
-                firebaseHelper.startPhoneVerification(phoneNumber, this)
-            }
+        progressDialog.show()
+        firebaseHelper.saveUserProfileToFirestore(userId, name, gender, phone, birthday, location, "patient", true) {
+            firebaseHelper.startPhoneVerification(phone, this, object : FirebaseHelper.PhoneVerificationCallback {
+                override fun onVerificationComplete() {
+                    progressDialog.dismiss()
+                    showToast("Profile saved and phone verified successfully")
+                }
+
+                override fun onVerificationFailed(error: String) {
+                    progressDialog.dismiss()
+                    showToast("Verification failed: $error")
+                }
+            })
         }
     }
 
-    companion object {
-        const val GPS_PERMISSION_REQUEST_CODE = 2
+    private fun validateFields(name: String, phone: String, gender: String, birthday: String, location: String): Boolean {
+        val phonePattern = "^(\\+62|0)\\d{8,12}$".toRegex()
+
+        return when {
+            name.isEmpty() || phone.isEmpty() || gender == "Not specified" || birthday.isEmpty() || birthday == "Pilih Tanggal Lahir"|| location.isEmpty() || location == "Location not available" || location == "Unable to fetch address" -> {
+                showToast("Please fill all fields.")
+                false
+            }
+            !phone.matches(phonePattern) -> {
+                showToast("Invalid phone number format.")
+                false
+            }
+            else -> true
+        }
+    }
+
+    private fun isDrawableEndClicked(event: MotionEvent, field: EditText): Boolean {
+        val drawableEnd = field.compoundDrawablesRelative[2]
+        return drawableEnd != null && event.rawX >= (field.right - drawableEnd.bounds.width())
+    }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return if (item.itemId == android.R.id.home) {
+            auth.signOut()
+            GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+            true
+        } else super.onOptionsItemSelected(item)
+    }
+
+    companion object{
+        const val GPS_PERMISSION_REQUEST_CODE = 1001
     }
 }
+

@@ -1,9 +1,9 @@
 package com.example.docchat.ui.form
 
-import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.PhoneAuthCredential
@@ -22,7 +22,9 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
         phoneNumber: String,
         birthday: String,
         location: String,
-        onComplete: () -> Unit // Callback
+        role: String,
+        isProfileCompleted: Boolean,
+        onComplete: () -> Unit // Callback){}
     ) {
         val db = FirebaseFirestore.getInstance()
         val userData = mapOf(
@@ -31,7 +33,8 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
             "phone" to phoneNumber,
             "birthday" to birthday,
             "location" to location,
-            "profileCompleted" to true
+            "role" to role,
+            "isProfileCompleted" to isProfileCompleted
         )
 
         db.collection("users").document(userId)
@@ -46,10 +49,12 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
             }
     }
 
-    fun startPhoneVerification(
-        phoneNumber: String,
-        activity: Activity
-    ) {
+    interface PhoneVerificationCallback {
+        fun onVerificationComplete()
+        fun onVerificationFailed(error: String)
+    }
+
+    fun startPhoneVerification(phoneNumber: String, activity: AppCompatActivity, callback: PhoneVerificationCallback) {
         val options = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(phoneNumber)
             .setTimeout(60L, TimeUnit.SECONDS)
@@ -57,10 +62,17 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
             .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
                 override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                     auth.signInWithCredential(credential)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                callback.onVerificationComplete()
+                            } else {
+                                callback.onVerificationFailed(task.exception?.message ?: "Unknown error")
+                            }
+                        }
                 }
 
                 override fun onVerificationFailed(e: FirebaseException) {
-                    Toast.makeText(context, "Verification failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    callback.onVerificationFailed(e.message ?: "Unknown error")
                 }
 
                 override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
@@ -75,3 +87,4 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
         PhoneAuthProvider.verifyPhoneNumber(options)
     }
 }
+
