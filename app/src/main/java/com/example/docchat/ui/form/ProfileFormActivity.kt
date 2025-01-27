@@ -59,7 +59,7 @@ class ProfileFormActivity : AppCompatActivity() {
 
     private fun setupProgressDialog() {
         progressDialog = AlertDialog.Builder(this)
-            .setView(R.layout.progress_dialog)
+            .setView(R.layout.dialog_progress)
             .setCancelable(false)
             .create()
     }
@@ -76,6 +76,7 @@ class ProfileFormActivity : AppCompatActivity() {
         supportActionBar?.apply {
             title = "Profile Form"
             setDisplayHomeAsUpEnabled(true)
+            supportActionBar?.setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24) // Use a white arrow icon
         }
     }
 
@@ -115,13 +116,17 @@ class ProfileFormActivity : AppCompatActivity() {
     private fun fetchCurrentLocation() {
         lifecycleScope.launch {
             locationHelper.fetchCurrentLocation { location ->
-                findViewById<EditText>(R.id.locationSearchField).setText(location)
+                // Update UI on the main thread
+                runOnUiThread {
+                    findViewById<EditText>(R.id.locationSearchField).setText(location)
+                }
             }
         }
     }
 
     private fun saveUserProfile() {
-        val userId = auth.currentUser?.uid ?: return
+        val currentUser = auth.currentUser ?: return
+        val currentEmail = currentUser.email ?: return
         val name = findViewById<EditText>(R.id.nameEditText).text.toString().trim()
         val phone = findViewById<EditText>(R.id.phoneNumberEditText).text.toString().trim()
         val gender = when (findViewById<RadioGroup>(R.id.rgGender).checkedRadioButtonId) {
@@ -135,7 +140,7 @@ class ProfileFormActivity : AppCompatActivity() {
         if (!validateFields(name, phone, gender, birthday, location)) return
 
         progressDialog.show()
-        firebaseHelper.saveUserProfileToFirestore(userId, name, gender, phone, birthday, location, "patient", true) {
+        firebaseHelper.saveUserProfileToFirestore(currentEmail, name, gender, phone, birthday, location, true) {
             firebaseHelper.startPhoneVerification(phone, this, object : FirebaseHelper.PhoneVerificationCallback {
                 override fun onVerificationComplete() {
                     progressDialog.dismiss()
@@ -177,12 +182,37 @@ class ProfileFormActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return if (item.itemId == android.R.id.home) {
-            auth.signOut()
-            GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
-            startActivity(Intent(this, LoginActivity::class.java))
-            finish()
+            signOut()
             true
         } else super.onOptionsItemSelected(item)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // Show confirmation dialog
+        val builder = AlertDialog.Builder(this)
+        builder.setMessage("Are you sure you want to go back?")
+            .setCancelable(false)
+            .setPositiveButton("Yes") { _, _ ->
+                super.onBackPressed()
+                auth.signOut()
+                GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+                startActivity(Intent(this, LoginActivity::class.java))
+                finish()
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+
+        val alert = builder.create()
+        alert.show()
+    }
+
+    private fun signOut() {
+        auth.signOut()
+        GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+        startActivity(Intent(this, LoginActivity::class.java))
+        finish()
     }
 
     companion object{

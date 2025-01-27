@@ -9,11 +9,14 @@
     android:background="?android:attr/windowBackground"
     tools:context=".SplashScreenActivity">
 
-    <ImageView
+    <TextView
         android:id="@+id/logoImageView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/arabis"
+        android:text="DocChat"
+        android:textSize="30sp"
+        android:textColor="@color/white"
         android:contentDescription="@string/app_name"/>
 
 </LinearLayout>

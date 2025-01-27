@@ -16,13 +16,12 @@ import java.util.concurrent.TimeUnit
 class FirebaseHelper(private val context: Context, private val auth: FirebaseAuth) {
 
     fun saveUserProfileToFirestore(
-        userId: String,
+        email: String,
         name: String,
         gender: String,
         phoneNumber: String,
         birthday: String,
         location: String,
-        role: String,
         isProfileCompleted: Boolean,
         onComplete: () -> Unit // Callback){}
     ) {
@@ -33,11 +32,10 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
             "phone" to phoneNumber,
             "birthday" to birthday,
             "location" to location,
-            "role" to role,
             "isProfileCompleted" to isProfileCompleted
         )
 
-        db.collection("users").document(userId)
+        db.collection("users").document(email)
             .set(userData, SetOptions.merge())
             .addOnSuccessListener {
                 Toast.makeText(context, "Profile saved successfully!", Toast.LENGTH_SHORT).show()

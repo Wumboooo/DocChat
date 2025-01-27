@@ -17,7 +17,6 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.SignInButton
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -31,24 +30,16 @@ class LoginActivity : AppCompatActivity() {
 
     companion object {
         private const val RC_SIGN_IN = 9001
+        var globalRole = ""
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Check if the user is already signed in
-        if (FirebaseAuth.getInstance().currentUser != null) {
-            // User is signed in, navigate directly to MainActivity
-            startActivity(Intent(this, MainActivity::class.java))
-            finish() // Close LoginActivity
-            return
-        }
-
         setContentView(R.layout.activity_login)
+
+        auth = FirebaseAuth.getInstance()
         loadingBar = findViewById(R.id.loadingBar)
 
-        // Rest of your login setup code
-        auth = FirebaseAuth.getInstance()
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
@@ -58,11 +49,15 @@ class LoginActivity : AppCompatActivity() {
         findViewById<SignInButton>(R.id.signInButton).setOnClickListener {
             signIn()
         }
+
+        // Check if user is already logged in
+        auth.currentUser?.let { currentUser ->
+            checkUserRoleAndNavigate(currentUser.email.orEmpty())
+        }
     }
 
     private fun signIn() {
         loadingBar.visibility = View.VISIBLE
-
         val signInIntent = googleSignInClient.signInIntent
         startActivityForResult(signInIntent, RC_SIGN_IN)
     }
@@ -76,7 +71,7 @@ class LoginActivity : AppCompatActivity() {
                 firebaseAuthWithGoogle(account)
             } catch (e: ApiException) {
                 loadingBar.visibility = View.GONE
-                Log.w("LoginActivity", "Google sign in failed", e)
+                Log.e("LoginActivity", "Google sign-in failed", e)
             }
         }
     }
@@ -88,58 +83,86 @@ class LoginActivity : AppCompatActivity() {
                 if (task.isSuccessful) {
                     val user = auth.currentUser
                     user?.let {
-                        val email = it.email ?: "No email"
-                        saveEmailToFirestore(email, it.uid)
-                        checkUserInFirestore(it)
-                        Toast.makeText(this, "Welcome ${user?.displayName}", Toast.LENGTH_SHORT).show()
+                        val email = it.email.orEmpty()
+                        createUserDocumentIfNeeded(email) {
+                            checkUserRoleAndNavigate(email)
+                        }
                     }
                 } else {
                     loadingBar.visibility = View.GONE
-                    Toast.makeText(this, "Authentication Failed.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Authentication failed.", Toast.LENGTH_SHORT).show()
                 }
             }
     }
 
-    private fun saveEmailToFirestore(email: String, userId: String) {
-        val db = FirebaseFirestore.getInstance()
-        val userData = mapOf("email" to email)
-
-        db.collection("users").document(userId)
-            .set(userData, SetOptions.merge())
-            .addOnSuccessListener {
-                Log.d("LoginActivity", "Email saved to Firestore successfully")
-            }
-            .addOnFailureListener { e ->
-                Log.e("LoginActivity", "Error saving email to Firestore", e)
-            }
-    }
-
-    private fun checkUserInFirestore(user: FirebaseUser) {
-        val userRef = firestore.collection("users").document(user.uid)
+    private fun createUserDocumentIfNeeded(email: String, callback: () -> Unit) {
+        val userRef = firestore.collection("users").document(email)
         userRef.get().addOnSuccessListener { document ->
-            if (document.exists()) {
-                val isProfileComplete = document.getBoolean("isProfileComplete") ?: false
-                if (isProfileComplete) {
-                    navigateToHome()
-                } else {
-                    navigateToProfileForm()
-                }
+            if (!document.exists()) {
+                val userData = mapOf("isProfileCompleted" to false)
+                userRef.set(userData, SetOptions.merge())
+                    .addOnSuccessListener { callback() }
+                    .addOnFailureListener {
+                        Log.e("LoginActivity", "Failed to create user document")
+                        callback()
+                    }
             } else {
-                // Buat entri baru dengan isProfileComplete = false
-                val userData = mapOf(
-                    "email" to user.email,
-                    "isProfileComplete" to false
-                )
-                userRef.set(userData, SetOptions.merge()).addOnSuccessListener {
-                    navigateToProfileForm()
-                }
+                callback()
             }
-        }.addOnFailureListener { e ->
-            Log.e("LoginActivity", "Failed to fetch user data", e)
-            Toast.makeText(this, "Failed to verify user data", Toast.LENGTH_SHORT).show()
+        }.addOnFailureListener {
+            Log.e("LoginActivity", "Failed to check user document")
+            callback()
         }
     }
 
+    private fun checkUserRoleAndNavigate(email: String) {
+        checkUserRole(email) { role ->
+            globalRole = role
+            when (role) {
+                "admin", "doctor" -> navigateToHome()
+                "user" -> checkUserProfileStatus(email)
+                else -> {
+                    loadingBar.visibility = View.GONE
+                    Toast.makeText(this, "Unknown role.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun checkUserRole(email: String, callback: (String) -> Unit) {
+        firestore.collection("admins").document(email).get()
+            .addOnSuccessListener { adminSnapshot ->
+                if (adminSnapshot.exists()) {
+                    callback("admin")
+                } else {
+                    firestore.collection("doctors").document(email).get()
+                        .addOnSuccessListener { doctorSnapshot ->
+                            if (doctorSnapshot.exists()) {
+                                callback("doctor")
+                            } else {
+                                callback("user")
+                            }
+                        }
+                        .addOnFailureListener { callback("user") }
+                }
+            }
+            .addOnFailureListener { callback("user") }
+    }
+
+    private fun checkUserProfileStatus(email: String) {
+        val userRef = firestore.collection("users").document(email)
+        userRef.get().addOnSuccessListener { document ->
+            val isProfileCompleted = document.getBoolean("isProfileCompleted") ?: false
+            if (isProfileCompleted) {
+                navigateToHome()
+            } else {
+                navigateToProfileForm()
+            }
+        }.addOnFailureListener {
+            Log.e("LoginActivity", "Failed to fetch user profile status")
+            navigateToProfileForm()
+        }
+    }
 
     private fun navigateToProfileForm() {
         loadingBar.visibility = View.GONE
@@ -150,7 +173,6 @@ class LoginActivity : AppCompatActivity() {
 
     private fun navigateToHome() {
         loadingBar.visibility = View.GONE
-        // Ensure all necessary data is saved before navigating
         val intent = Intent(this, MainActivity::class.java)
         startActivity(intent)
         finish()
