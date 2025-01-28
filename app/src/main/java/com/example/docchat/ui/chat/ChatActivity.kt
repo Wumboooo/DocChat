@@ -167,10 +167,10 @@ class ChatActivity : AppCompatActivity() {
         val chatRef = firestore.collection("chats").document(chatId!!)
         chatRef.get().addOnSuccessListener { document ->
             val participants = document.get("participants") as? List<*>
-            val senderEmail = participants?.get(0) ?: return@addOnSuccessListener
+            val userEmail = participants?.get(0) ?: return@addOnSuccessListener
 
             val newChat = mapOf(
-                "participants" to listOf(senderEmail, doctorEmail),
+                "participants" to listOf(userEmail, doctorEmail),
                 "lastMessage" to "Ada yang bisa saya bantu?",
                 "lastUpdated" to System.currentTimeMillis(),
                 "timestamp" to System.currentTimeMillis(),
@@ -204,44 +204,68 @@ class ChatActivity : AppCompatActivity() {
 
     private fun createSummary() {
         val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_summary, null)
-        val penyakitEditText = dialogView.findViewById<EditText>(R.id.penyakitEditText)
-        val resepEditText = dialogView.findViewById<EditText>(R.id.resepEditText)
+        val diseaseEditText = dialogView.findViewById<EditText>(R.id.diseaseEditText)
+        val medicineEditText = dialogView.findViewById<EditText>(R.id.medicineEditText)
 
         AlertDialog.Builder(this)
             .setTitle("Buat Ringkasan")
             .setView(dialogView)
             .setPositiveButton("Simpan") { _, _ ->
-                val penyakit = penyakitEditText.text.toString()
-                val resep = resepEditText.text.toString()
+                val chatRef = firestore.collection("chats").document(chatId!!)
+                chatRef.get().addOnSuccessListener { document ->
+                    val participants = document.get("participants") as? List<*>
+                    val userEmail = participants?.get(0) ?: return@addOnSuccessListener
+                    val doctorEmail = participants[1] as? String ?: return@addOnSuccessListener
+                    val disease = diseaseEditText.text.toString()
+                    val medicine = medicineEditText.text.toString()
+                    val currentEmail = auth.currentUser?.email ?: return@addOnSuccessListener
 
-                if (penyakit.isBlank() || resep.isBlank()) {
-                    Toast.makeText(this, "Harap isi semua field.", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
+                    val userRef = firestore.collection("doctors").document(doctorEmail)
+                    userRef.get().addOnSuccessListener { document ->
+                        val doctorName = document.getString("name") ?: return@addOnSuccessListener
 
-                val summaryData = mapOf(
-                    "penyakit" to penyakit,
-                    "resep" to resep
-                )
+                        if (disease.isBlank() || medicine.isBlank()) {
+                            Toast.makeText(this, "Harap isi semua field.", Toast.LENGTH_SHORT).show()
+                            return@addOnSuccessListener
+                        }
 
-                firestore.collection("chats").document(chatId!!)
-                    .update("summary", summaryData)
-                    .addOnSuccessListener {
-                        val summaryMessage = mapOf(
-                            "senderId" to auth.currentUser!!.uid,
-                            "text" to "Dokter telah membuat ringkasan.",
-                            "timestamp" to System.currentTimeMillis(),
-                            "isSummary" to true
+                        val summaryData = mapOf(
+                            "patientEmail" to userEmail,
+                            "doctorName" to doctorName,
+                            "date" to System.currentTimeMillis(),
+                            "disease" to disease,
+                            "medicine" to medicine
                         )
 
-                        firestore.collection("chats").document(chatId!!).collection("messages")
-                            .add(summaryMessage)
+                        firestore.collection("chats").document(chatId!!)
+                            .update("summary", summaryData)
+                            .addOnSuccessListener {
+                                val summaryMessage = mapOf(
+                                    "senderEmail" to currentEmail,
+                                    "text" to "Dokter telah membuat summary.",
+                                    "timestamp" to System.currentTimeMillis(),
+                                )
 
-                        Toast.makeText(this, "Ringkasan dibuat dan diteruskan ke admin.", Toast.LENGTH_SHORT).show()
+                                firestore.collection("chats").document(chatId!!).collection("messages")
+                                    .add(summaryMessage)
+
+                                Toast.makeText(
+                                    this,
+                                    "Ringkasan dibuat dan diteruskan ke admin.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(
+                                    this,
+                                    "Gagal membuat ringkasan. Coba lagi.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
                     }
-                    .addOnFailureListener {
-                        Toast.makeText(this, "Gagal membuat ringkasan. Coba lagi.", Toast.LENGTH_SHORT).show()
-                    }
+
+
+                }
             }
             .setNegativeButton("Batal", null)
             .show()

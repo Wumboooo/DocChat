@@ -15,3 +15,13 @@ data class Chat(
     var summary: Map<String, Any>? = null,   // Summary dari dokter
     var participantName: String? = null, // Nama peserta chat
 )
+
+data class ChatSummary(
+    var summaryId: String? = null,
+    val patientEmail: String = "",
+    val doctorName: String = "",
+    val date: Long = 0L,
+    var disease: String = "",
+    var medicine: String = ""
+)
+
