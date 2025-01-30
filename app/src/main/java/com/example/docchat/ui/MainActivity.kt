@@ -9,9 +9,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.docchat.R
+import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.databinding.ActivityMainBinding
 import com.example.docchat.ui.login.LoginActivity
-import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView

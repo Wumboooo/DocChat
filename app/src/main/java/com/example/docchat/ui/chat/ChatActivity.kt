@@ -14,8 +14,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.docchat.R
+import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.ui.Message
-import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 

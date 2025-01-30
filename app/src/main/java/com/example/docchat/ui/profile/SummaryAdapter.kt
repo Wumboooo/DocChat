@@ -8,7 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.example.docchat.ui.ChatSummary
 import com.example.docchat.R
-import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
+import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
