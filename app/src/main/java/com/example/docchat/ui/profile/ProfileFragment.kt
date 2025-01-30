@@ -14,8 +14,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.docchat.ui.ChatSummary
 import com.example.docchat.R
+import com.example.docchat.ui.ChatSummary
 import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
@@ -156,8 +156,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun dismissKeyboard() {
-        val imm =
-            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
         val currentFocus = requireActivity().currentFocus
         currentFocus?.let {
             imm.hideSoftInputFromWindow(it.windowToken, 0)

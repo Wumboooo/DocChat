@@ -3,25 +3,21 @@ package com.example.docchat.ui.chat
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.docchat.ui.Message
 import com.example.docchat.R
+import com.example.docchat.ui.Message
 import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 
 class ChatActivity : AppCompatActivity() {
     private lateinit var firestore: FirebaseFirestore
@@ -30,6 +26,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var messageEditText: EditText
     private lateinit var sendButton: Button
+    private lateinit var chatViewModel: ChatViewModel
 
     private val messages = mutableListOf<Message>()
     private var chatId: String? = null
@@ -41,11 +38,18 @@ class ChatActivity : AppCompatActivity() {
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
+        // **Pastikan Firestore sudah diinisialisasi sebelum digunakan**
         firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
+
         recyclerView = findViewById(R.id.recyclerView)
         messageEditText = findViewById(R.id.messageEditText)
         sendButton = findViewById(R.id.sendButton)
+
+        // **Baru inisialisasi repository dan ViewModel setelah firestore siap**
+        val chatRepository = ChatRepository(firestore)
+        val factory = ChatViewModelFactory(chatRepository)
+        chatViewModel = ViewModelProvider(this, factory).get(ChatViewModel::class.java)
 
         chatId = intent.getStringExtra("chatId")
         if (chatId == null) {
@@ -60,10 +64,19 @@ class ChatActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(messages, currentUserEmail)
         recyclerView.adapter = chatAdapter
 
-        loadMessages()
+        chatViewModel.messages.observe(this) { newMessages ->
+            messages.clear()
+            messages.addAll(newMessages)
+            chatAdapter.notifyDataSetChanged()
+            recyclerView.scrollToPosition(messages.size - 1)
+        }
+
+        chatViewModel.loadMessages(chatId!!)
 
         sendButton.setOnClickListener {
-            sendMessage()
+            val text = messageEditText.text.toString()
+            chatViewModel.sendMessage(chatId!!, auth, text)
+            messageEditText.text.clear()
         }
     }
 
@@ -93,73 +106,16 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadMessages() {
-        val chatRef = firestore.collection("chats").document(chatId!!)
-        chatRef.collection("messages")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
-            .addSnapshotListener { snapshot, _ ->
-                if (snapshot != null) {
-                    messages.clear()
-                    for (doc in snapshot.documents) {
-                        val message = doc.toObject(Message::class.java)
-                        if (message != null) {
-                            Log.d("ChatActivity", "Message: ${message.text}, Sender: ${message.senderEmail}")
-                            messages.add(message)
-                        }
-                    }
-                    chatAdapter.notifyDataSetChanged()
-                    recyclerView.scrollToPosition(messages.size - 1)
-                }
-            }
-    }
-
-    private fun sendMessage() {
-        val text = messageEditText.text.toString()
-        if (text.isBlank()) return
-
-        val message = mapOf(
-            "senderEmail" to auth.currentUser!!.email,
-            "text" to text,
-            "timestamp" to System.currentTimeMillis()
-        )
-
-        val chatRef = firestore.collection("chats").document(chatId!!)
-        chatRef.collection("messages").add(message).addOnSuccessListener { documentRef ->
-            documentRef.get().addOnSuccessListener { snapshot ->
-                val timestamp = snapshot.getLong("timestamp") ?: System.currentTimeMillis()
-                chatRef.update(
-                    mapOf(
-                        "lastMessage" to text,
-                        "lastUpdated" to timestamp
-                    )
-                )
-                messageEditText.text.clear()
-            }
-        }
-    }
-
     private fun forwardMessage() {
-        val doctorsRef = firestore.collection("doctors")
-        doctorsRef.get().addOnSuccessListener { snapshot ->
-            if (snapshot.isEmpty) {
+        chatViewModel.forwardMessage(firestore, chatId!!) { success, doctorList ->
+            if (!success || doctorList == null) {
                 Toast.makeText(this, "Tidak ada dokter tersedia.", Toast.LENGTH_SHORT).show()
-                return@addOnSuccessListener
+                return@forwardMessage
             }
 
-            val doctorList = snapshot.documents.map { doc ->
-                val name = doc.getString("name") ?: "Unknown"
-                val specialization = doc.getString("specialization") ?: "Unknown"
-                "$name - $specialization"
+            ChatHelper.showDoctorSelectionDialog(this, doctorList) { doctorEmail ->
+                createNewChatWithDoctor(doctorEmail)
             }
-
-            AlertDialog.Builder(this)
-                .setTitle("Pilih Dokter")
-                .setItems(doctorList.toTypedArray()) { _, which ->
-                    val selectedDoctor = snapshot.documents[which]
-                    val doctorEmail = selectedDoctor.id
-                    createNewChatWithDoctor(doctorEmail)
-                }
-                .show()
         }
     }
 
@@ -204,83 +160,47 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun createSummary() {
-        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_summary, null)
-        val diseaseEditText = dialogView.findViewById<EditText>(R.id.diseaseEditText)
-        val medicineEditText = dialogView.findViewById<EditText>(R.id.medicineEditText)
+        ChatHelper.showSummaryDialog(this) { disease, medicine ->
+            saveSummary(disease, medicine)
+        }
+    }
 
-        val dialog = AlertDialog.Builder(this)
-            .setTitle("Buat Ringkasan")
-            .setView(dialogView)
-            .setPositiveButton("Simpan") { _, _ ->
-                val chatRef = firestore.collection("chats").document(chatId!!)
-                chatRef.get().addOnSuccessListener { document ->
-                    val participants = document.get("participants") as? List<*>
-                    val userEmail = participants?.get(0) ?: return@addOnSuccessListener
-                    val doctorEmail = participants[1] as? String ?: return@addOnSuccessListener
-                    val disease = diseaseEditText.text.toString()
-                    val medicine = medicineEditText.text.toString()
-                    val currentEmail = auth.currentUser?.email ?: return@addOnSuccessListener
+    private fun saveSummary(disease: String, medicine: String) {
+        val chatRef = firestore.collection("chats").document(chatId!!)
+        chatRef.get().addOnSuccessListener { document ->
+            val participants = document.get("participants") as? List<*> ?: return@addOnSuccessListener
+            val userEmail = participants.getOrNull(0) ?: return@addOnSuccessListener
+            val doctorEmail = participants.getOrNull(1) as? String ?: return@addOnSuccessListener
+            val currentEmail = auth.currentUser?.email ?: return@addOnSuccessListener
 
-                    val userRef = firestore.collection("doctors").document(doctorEmail)
-                    userRef.get().addOnSuccessListener { document ->
-                        val doctorName = document.getString("name") ?: return@addOnSuccessListener
+            val userRef = firestore.collection("doctors").document(doctorEmail)
+            userRef.get().addOnSuccessListener { doc ->
+                val doctorName = doc.getString("name") ?: return@addOnSuccessListener
 
-                        if (disease.isBlank() || medicine.isBlank()) {
-                            Toast.makeText(this, "Harap isi semua field.", Toast.LENGTH_SHORT).show()
-                            return@addOnSuccessListener
-                        }
+                val summaryData = mapOf(
+                    "patientEmail" to userEmail,
+                    "doctorName" to doctorName,
+                    "date" to System.currentTimeMillis(),
+                    "disease" to disease,
+                    "medicine" to medicine
+                )
 
-                        val summaryData = mapOf(
-                            "patientEmail" to userEmail,
-                            "doctorName" to doctorName,
-                            "date" to System.currentTimeMillis(),
-                            "disease" to disease,
-                            "medicine" to medicine
+                chatRef.update("summary", summaryData)
+                    .addOnSuccessListener {
+                        val summaryMessage = mapOf(
+                            "senderEmail" to currentEmail,
+                            "text" to "Dokter telah membuat summary.",
+                            "timestamp" to System.currentTimeMillis()
                         )
 
-                        firestore.collection("chats").document(chatId!!)
-                            .update("summary", summaryData)
-                            .addOnSuccessListener {
-                                val summaryMessage = mapOf(
-                                    "senderEmail" to currentEmail,
-                                    "text" to "Dokter telah membuat summary.",
-                                    "timestamp" to System.currentTimeMillis(),
-                                )
-
-                                firestore.collection("chats").document(chatId!!).collection("messages")
-                                    .add(summaryMessage)
-
-                                Toast.makeText(
-                                    this,
-                                    "Ringkasan dibuat dan diteruskan ke admin.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                            .addOnFailureListener {
-                                Toast.makeText(
-                                    this,
-                                    "Gagal membuat ringkasan. Coba lagi.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                        chatRef.collection("messages").add(summaryMessage)
+                        Toast.makeText(this, "Ringkasan berhasil dibuat.", Toast.LENGTH_SHORT).show()
                     }
-
-
-                }
-            }
-            .setNegativeButton("Batal", null)
-            .create()
-
-        dialog.setOnShowListener {
-            val view = dialogView.findViewById<View>(R.id.summaryLayout) ?: dialogView
-            view.setOnTouchListener { _, _ ->
-                dismissKeyboard(view)
-                false
+                    .addOnFailureListener {
+                        Toast.makeText(this, "Gagal membuat ringkasan.", Toast.LENGTH_SHORT).show()
+                    }
             }
         }
-
-        dialog.show()
-
     }
 
     private fun endSession() {
@@ -290,10 +210,5 @@ class ChatActivity : AppCompatActivity() {
                 Toast.makeText(this, "Sesi berakhir. Tidak bisa mengirim pesan lagi.", Toast.LENGTH_SHORT).show()
                 finish()
             }
-    }
-
-    private fun dismissKeyboard(view: View) {
-        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }
