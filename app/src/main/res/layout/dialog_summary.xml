@@ -3,19 +3,28 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="16dp"
+    android:id="@+id/summaryLayout">
 
     <EditText
         android:id="@+id/diseaseEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Masukkan Penyakit"
-        android:inputType="text" />
+        android:inputType="text"
+        android:imeOptions="actionNone"
+        android:gravity="top"
+        android:minLines="3"
+        android:scrollHorizontally="false" />
 
     <EditText
         android:id="@+id/medicineEditText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Masukkan Resep Obat"
-        android:inputType="text" />
+        android:inputType="textMultiLine"
+        android:imeOptions="actionNone"
+        android:gravity="top"
+        android:minLines="3"
+        android:scrollHorizontally="false"/>
 </LinearLayout>

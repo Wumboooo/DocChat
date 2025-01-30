@@ -1,23 +1,27 @@
-package com.example.docchat
+package com.example.docchat.ui
 
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import androidx.appcompat.app.AlertDialog
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.example.docchat.R
 import com.example.docchat.databinding.ActivityMainBinding
 import com.example.docchat.ui.login.LoginActivity
+import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private val firestore = FirebaseFirestore.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,36 +50,32 @@ class MainActivity : AppCompatActivity() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
-            R.id.action_sign_out -> {
-                // Sign out from Firebase
-                FirebaseAuth.getInstance().signOut()
-
-                // Optionally, sign out from Google as well if using Google Sign-In
-                GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
-
-                // Navigate to LoginActivity
-                val intent = Intent(this, LoginActivity::class.java)
-                startActivity(intent)
-                finish() // End MainActivity to prevent back navigation
+            R.id.action_add_user -> {
+                if (globalRole == "admin") {
+                    showAddUserDialog()
+                } else {
+                    Toast.makeText(this, "Hanya admin yang dapat menambahkan pengguna.", Toast.LENGTH_SHORT).show()
+                }
                 true
             }
-
+            R.id.action_sign_out -> {
+                signOut()
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    override fun onBackPressed() {
-        // You can add a custom dialog to confirm exit if needed
-        val builder = AlertDialog.Builder(this)
-        builder.setMessage("Are you sure you want to exit?")
-            .setCancelable(false)
-            .setPositiveButton("Yes") { _, _ ->
-                super.onBackPressed() // Call the super to perform the default behavior
-            }
-            .setNegativeButton("No") { dialog, _ ->
-                dialog.dismiss()
-            }
-        val alert = builder.create()
-        alert.show()
+    private fun signOut() {
+        FirebaseAuth.getInstance().signOut()
+        GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
+        val intent = Intent(this, LoginActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+
+    private fun showAddUserDialog() {
+        val addUserDialog = AddUserDialog(this, firestore)
+        addUserDialog.show()
     }
 }

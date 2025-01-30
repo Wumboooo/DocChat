@@ -6,6 +6,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -14,7 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.docchat.Message
+import com.example.docchat.ui.Message
 import com.example.docchat.R
 import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.firebase.auth.FirebaseAuth
@@ -136,7 +138,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-
     private fun forwardMessage() {
         val doctorsRef = firestore.collection("doctors")
         doctorsRef.get().addOnSuccessListener { snapshot ->
@@ -207,7 +208,7 @@ class ChatActivity : AppCompatActivity() {
         val diseaseEditText = dialogView.findViewById<EditText>(R.id.diseaseEditText)
         val medicineEditText = dialogView.findViewById<EditText>(R.id.medicineEditText)
 
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle("Buat Ringkasan")
             .setView(dialogView)
             .setPositiveButton("Simpan") { _, _ ->
@@ -268,7 +269,18 @@ class ChatActivity : AppCompatActivity() {
                 }
             }
             .setNegativeButton("Batal", null)
-            .show()
+            .create()
+
+        dialog.setOnShowListener {
+            val view = dialogView.findViewById<View>(R.id.summaryLayout) ?: dialogView
+            view.setOnTouchListener { _, _ ->
+                dismissKeyboard(view)
+                false
+            }
+        }
+
+        dialog.show()
+
     }
 
     private fun endSession() {
@@ -278,5 +290,10 @@ class ChatActivity : AppCompatActivity() {
                 Toast.makeText(this, "Sesi berakhir. Tidak bisa mengirim pesan lagi.", Toast.LENGTH_SHORT).show()
                 finish()
             }
+    }
+
+    private fun dismissKeyboard(view: View) {
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
     }
 }

@@ -1,17 +1,20 @@
 package com.example.docchat.ui.profile
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.example.docchat.ChatSummary
+import com.example.docchat.ui.ChatSummary
 import com.example.docchat.R
 import com.example.docchat.ui.login.LoginActivity.Companion.globalRole
 import com.google.firebase.auth.FirebaseAuth
@@ -42,6 +45,12 @@ class ProfileFragment : Fragment() {
         recyclerView.adapter = summaryAdapter
 
         loadSummaries()
+
+        // Set up touch listener to dismiss keyboard
+        view.setOnTouchListener { _, _ ->
+            dismissKeyboard()
+            false
+        }
 
         return view
     }
@@ -97,6 +106,25 @@ class ProfileFragment : Fragment() {
         diseaseEditText.setText(summary.disease)
         medicineEditText.setText(summary.medicine)
 
+        // Ensure Enter adds a new line
+        diseaseEditText.setOnKeyListener { v, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
+                diseaseEditText.append("\n")
+                true
+            } else {
+                false
+            }
+        }
+
+        medicineEditText.setOnKeyListener { v, keyCode, event ->
+            if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
+                medicineEditText.append("\n")
+                true
+            } else {
+                false
+            }
+        }
+
         AlertDialog.Builder(requireContext())
             .setTitle("Edit Summary")
             .setView(dialogView)
@@ -125,6 +153,16 @@ class ProfileFragment : Fragment() {
             .addOnFailureListener {
                 Toast.makeText(context, "Gagal memperbarui ringkasan.", Toast.LENGTH_SHORT).show()
             }
+    }
+
+    private fun dismissKeyboard() {
+        val imm =
+            requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        val currentFocus = requireActivity().currentFocus
+        currentFocus?.let {
+            imm.hideSoftInputFromWindow(it.windowToken, 0)
+            it.clearFocus()
+        }
     }
 }
 

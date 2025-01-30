@@ -1,4 +1,4 @@
-package com.example.docchat
+package com.example.docchat.ui
 
 data class Message(
     val senderEmail: String = "",

@@ -3,11 +3,14 @@ package com.example.docchat.ui.form
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.MotionEvent
+import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.RadioGroup
@@ -49,12 +52,19 @@ class ProfileFormActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile_form)
 
+        // Dismiss keyboard when tapping outside EditText
+        findViewById<View>(R.id.main).setOnTouchListener { _, _ ->
+            dismissKeyboard()
+            false
+        }
+
         setupProgressDialog()
         setupLocationField()
         initializeHelpers()
         setupToolbar()
         setupListeners()
         checkGpsAndRequestPermission()
+
     }
 
     private fun setupProgressDialog() {
@@ -90,6 +100,7 @@ class ProfileFormActivity : AppCompatActivity() {
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveUserProfile()
         }
+
     }
 
     private fun setupLocationField() {
@@ -213,6 +224,14 @@ class ProfileFormActivity : AppCompatActivity() {
         GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
         startActivity(Intent(this, LoginActivity::class.java))
         finish()
+    }
+
+    private fun dismissKeyboard() {
+        val view = this.currentFocus
+        if (view != null) {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+        }
     }
 
     companion object{

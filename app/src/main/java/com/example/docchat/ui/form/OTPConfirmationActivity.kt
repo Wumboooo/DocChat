@@ -6,7 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.example.docchat.MainActivity
+import com.example.docchat.ui.MainActivity
 import com.example.docchat.R
 import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
