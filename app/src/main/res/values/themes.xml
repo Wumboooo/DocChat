@@ -18,6 +18,6 @@
 
     <!-- Style for Bottom Navigation to apply active indicator -->
     <style name="CustomBottomNavigationStyle" parent="Widget.Material3.BottomNavigationView">
-        <item name="itemActiveIndicatorStyle">@drawable/rounded_background</item>
+        <item name="android:itemBackground">@drawable/nav_item_background</item>
     </style>
 </resources>

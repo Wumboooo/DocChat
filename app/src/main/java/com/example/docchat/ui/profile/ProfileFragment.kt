@@ -28,6 +28,7 @@ class ProfileFragment : Fragment() {
     private lateinit var summaryAdapter: SummaryAdapter
     private val summaryList = mutableListOf<ChatSummary>()
 
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -42,7 +43,9 @@ class ProfileFragment : Fragment() {
         summaryAdapter = SummaryAdapter(summaryList) { summary ->
             handleSummaryClick(summary)
         }
+
         recyclerView.adapter = summaryAdapter
+
 
         loadSummaries()
 
@@ -92,6 +95,7 @@ class ProfileFragment : Fragment() {
     }
 
     private fun handleSummaryClick(summary: ChatSummary) {
+
         if (globalRole == "doctor" || globalRole == "admin") {
             showEditSummaryDialog(summary)
         } else {
@@ -164,4 +168,3 @@ class ProfileFragment : Fragment() {
         }
     }
 }
-

@@ -2,7 +2,6 @@ package com.example.docchat.ui.home
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -12,11 +11,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.docchat.R
+import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.ui.chat.ChatActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 
 class HomeFragment : Fragment() {
 
@@ -24,6 +23,7 @@ class HomeFragment : Fragment() {
     private lateinit var auth: FirebaseAuth
     private lateinit var recyclerView: RecyclerView
     private lateinit var chatAdapter: HomeAdapter
+    private lateinit var startChatButton: FloatingActionButton
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     override fun onCreateView(
@@ -33,12 +33,13 @@ class HomeFragment : Fragment() {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
         auth = FirebaseAuth.getInstance()
         val firestore = FirebaseFirestore.getInstance()
-        val repository = ChatRepository(firestore)
+        val repository = HomeRepository(firestore)
 
         viewModel = ViewModelProvider(
             this,
             ViewModelFactory(repository)
         )[HomeViewModel::class.java]
+
 
         recyclerView = view.findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(context)
@@ -57,7 +58,16 @@ class HomeFragment : Fragment() {
 
         loadChats()
 
-        view.findViewById<FloatingActionButton>(R.id.startChat).setOnClickListener {
+        startChatButton = view.findViewById(R.id.startChat)
+
+        Toast.makeText(context, "Role: $globalRole", Toast.LENGTH_SHORT).show()
+        if (globalRole == "user") {
+            startChatButton.visibility = View.VISIBLE
+        } else {
+            startChatButton.visibility = View.GONE
+        }
+
+        startChatButton.setOnClickListener {
             startChatWithAdmin()
         }
 

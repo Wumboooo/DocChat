@@ -19,11 +19,14 @@ class SplashScreenActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_splash_screen)
         enableEdgeToEdge()
+        setContentView(R.layout.activity_splash_screen)
+        window.navigationBarColor = resources.getColor(R.color.darkerblue, theme)
 
         auth = FirebaseAuth.getInstance()
         userRepository = UserRepository(FirebaseFirestore.getInstance())
+
+
 
         Handler(Looper.getMainLooper()).postDelayed({
             val currentUser = auth.currentUser

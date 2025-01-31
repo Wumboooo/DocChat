@@ -10,6 +10,7 @@ material = "1.12.0"
 activity = "1.9.3"
 constraintlayout = "2.2.0"
 playServicesBase = "18.5.0"
+lifecycleViewmodelAndroid = "2.8.7"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -21,6 +22,7 @@ material = { group = "com.google.android.material", name = "material", version.r
 androidx-activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 play-services-base = { group = "com.google.android.gms", name = "play-services-base", version.ref = "playServicesBase" }
+androidx-lifecycle-viewmodel-android = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-android", version.ref = "lifecycleViewmodelAndroid" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

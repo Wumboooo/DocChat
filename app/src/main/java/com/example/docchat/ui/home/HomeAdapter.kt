@@ -5,8 +5,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.docchat.ui.Chat
 import com.example.docchat.R
+import com.example.docchat.ui.Chat
+import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,9 +42,19 @@ class HomeAdapter(
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
 
         fun bind(chat: Chat) {
-            chatNameTextView.text = chat.participantName
+            val firestore = FirebaseFirestore.getInstance()
+            val chatRepo = HomeRepository(firestore)
+
+            chat.participantName?.let {
+                chatRepo.fetchParticipantInfo(it!!) { name, specialization ->
+                    val specializationText = if (specialization.isNotEmpty()) " - $specialization" else ""
+                    chatNameTextView.text = "$name$specializationText - ${chat.status}"
+                }
+            }
+
             lastMessageTextView.text = chat.lastMessage
             timestampTextView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(chat.lastUpdated))
         }
+
     }
 }

@@ -1,5 +1,6 @@
 package com.example.docchat.ui.chat
 
+import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -18,8 +19,8 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
         }
     }
 
-    fun sendMessage(chatId: String, auth: FirebaseAuth, text: String) {
-        chatRepository.sendMessage(chatId, auth, text) {}
+    fun sendMessage(chatId: String, auth: FirebaseAuth, text: String, context: Context) {
+        chatRepository.sendMessage(chatId, auth, text, context) {}
     }
 
 

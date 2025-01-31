@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.example.docchat.ui.Chat
 
-class HomeViewModel(private val repository: ChatRepository) : ViewModel() {
+class HomeViewModel(private val repository: HomeRepository) : ViewModel() {
 
     private val _chats = MutableLiveData<List<Chat>>()
     val chats: LiveData<List<Chat>> get() = _chats

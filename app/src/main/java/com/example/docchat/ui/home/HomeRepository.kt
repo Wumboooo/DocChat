@@ -5,7 +5,7 @@ import com.example.docchat.ui.Chat
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
-class ChatRepository(private val firestore: FirebaseFirestore) {
+class HomeRepository(private val firestore: FirebaseFirestore) {
 
     fun fetchChats(currentEmail: String, onComplete: (List<Chat>) -> Unit) {
         firestore.collection("chats")
@@ -59,4 +59,41 @@ class ChatRepository(private val firestore: FirebaseFirestore) {
                 callback(email)
             }
     }
+
+    fun fetchParticipantInfo(email: String, callback: (String, String) -> Unit) {
+        firestore.collection("admins").document(email).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    callback(doc.getString("name") ?: email, "")
+                } else {
+                    fetchDoctorOrUser(email, callback)
+                }
+            }
+            .addOnFailureListener {
+                fetchDoctorOrUser(email, callback)
+            }
+    }
+
+    private fun fetchDoctorOrUser(email: String, callback: (String, String) -> Unit) {
+        firestore.collection("doctors").document(email).get()
+            .addOnSuccessListener { doc ->
+                if (doc.exists()) {
+                    val name = doc.getString("name") ?: email
+                    val specialization = doc.getString("specialization") ?: ""
+                    callback(name, specialization)
+                } else {
+                    firestore.collection("users").document(email).get()
+                        .addOnSuccessListener { userDoc ->
+                            callback(userDoc.getString("name") ?: email, "")
+                        }
+                        .addOnFailureListener {
+                            callback(email, "")
+                        }
+                }
+            }
+            .addOnFailureListener {
+                callback(email, "")
+            }
+    }
+
 }

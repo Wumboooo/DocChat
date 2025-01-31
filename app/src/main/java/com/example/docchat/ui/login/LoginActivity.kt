@@ -7,6 +7,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.docchat.R
+import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.ui.MainActivity
 import com.example.docchat.ui.form.ProfileFormActivity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -53,6 +54,7 @@ class LoginActivity : AppCompatActivity() {
                     authManager.authenticateWithGoogle(account) { user ->
                         user?.email?.let { email ->
                             userRepository.checkUserRole(email) { role ->
+                                globalRole = role
                                 when (role) {
                                     "admin", "doctor" -> navigateTo(MainActivity::class.java)
                                     "user" -> userRepository.isProfileCompleted(email) { isCompleted ->

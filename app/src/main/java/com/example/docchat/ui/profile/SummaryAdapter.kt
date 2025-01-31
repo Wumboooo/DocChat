@@ -6,9 +6,9 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.example.docchat.ui.ChatSummary
 import com.example.docchat.R
 import com.example.docchat.SplashScreenActivity.Companion.globalRole
+import com.example.docchat.ui.ChatSummary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

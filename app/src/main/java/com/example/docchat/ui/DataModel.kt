@@ -25,3 +25,15 @@ data class ChatSummary(
     var medicine: String = ""
 )
 
+data class Admin(
+    var email: String = "",
+    val name: String = ""
+)
+
+data class Doctor(
+    var email: String = "",
+    val name: String = "",
+    val experience: Int = 0,
+    val fee: Int = 0,
+    val specialization: String = ""
+)

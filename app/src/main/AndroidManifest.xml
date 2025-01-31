@@ -28,6 +28,9 @@
             android:value="@string/GEO_API_KEY" />
 
         <activity
+            android:name=".ui.adminlist.AdminDoctorListActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.form.MapPickerActivity"
             android:exported="false" />
         <activity

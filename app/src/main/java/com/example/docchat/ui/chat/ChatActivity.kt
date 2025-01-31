@@ -64,6 +64,7 @@ class ChatActivity : AppCompatActivity() {
         chatAdapter = ChatAdapter(messages, currentUserEmail)
         recyclerView.adapter = chatAdapter
 
+
         chatViewModel.messages.observe(this) { newMessages ->
             messages.clear()
             messages.addAll(newMessages)
@@ -75,7 +76,7 @@ class ChatActivity : AppCompatActivity() {
 
         sendButton.setOnClickListener {
             val text = messageEditText.text.toString()
-            chatViewModel.sendMessage(chatId!!, auth, text)
+            chatViewModel.sendMessage(chatId!!, auth, text, this)
             messageEditText.text.clear()
         }
     }
@@ -85,6 +86,7 @@ class ChatActivity : AppCompatActivity() {
         menu?.findItem(R.id.menu_forward)?.isVisible = globalRole == "admin"
         menu?.findItem(R.id.menu_end_session)?.isVisible = globalRole == "doctor"
         menu?.findItem(R.id.menu_summary)?.isVisible = globalRole == "doctor"
+
         return true
     }
 

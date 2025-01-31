@@ -1,4 +1,4 @@
-package com.example.docchat.ui
+package com.example.docchat.ui.adminlist
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -10,13 +10,13 @@ import android.widget.Spinner
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import com.example.docchat.R
-import com.google.android.gms.tasks.Task
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 
 
-class AddUserDialog(private val context: Context, private val firestore: FirebaseFirestore) {
+class AddUserDialog(
+    private val context: Context,
+    private val firestore: FirebaseFirestore
+) {
 
     fun show() {
         val builder = AlertDialog.Builder(context)
@@ -70,13 +70,16 @@ class AddUserDialog(private val context: Context, private val firestore: Firebas
                 if (isUnique) {
                     if (role == "Dokter") {
                         val specialization = specializationEditText.text.toString().trim()
-                        val fee = feeEditText.text.toString().trim()
-                        val experience = experienceEditText.text.toString().trim()
+                        val feeText = feeEditText.text.toString().trim()
+                        val experienceText = experienceEditText.text.toString().trim()
 
-                        if (specialization.isEmpty() || fee.isEmpty() || experience.isEmpty()) {
+                        if (specialization.isEmpty() || feeText.isEmpty() || experienceText.isEmpty()) {
                             Toast.makeText(context, "Semua field dokter harus diisi.", Toast.LENGTH_SHORT).show()
                             return@validateEmail
                         }
+
+                        val fee = feeText.toIntOrNull() ?: 0
+                        val experience = experienceText.toIntOrNull() ?: 0
 
                         addDoctorToDatabase(email, name, specialization, fee, experience)
                     } else {
@@ -92,23 +95,9 @@ class AddUserDialog(private val context: Context, private val firestore: Firebas
     }
 
     private fun validateEmail(email: String, callback: (Boolean) -> Unit) {
-        val usersCollection = listOf("users", "admins", "doctors")
-        var isUnique = true
-
-        val tasks = usersCollection.map { collection ->
-            firestore.collection(collection).document(email).get()
-        }
-
-        Tasks.whenAllComplete(tasks)
-            .addOnSuccessListener {
-                for (task in tasks) {
-                    val result = (task as Task<DocumentSnapshot>).result
-                    if (result.exists()) {
-                        isUnique = false
-                        break
-                    }
-                }
-                callback(isUnique)
+        firestore.collection("users").document(email).get()
+            .addOnSuccessListener { document ->
+                callback(!document.exists())
             }
             .addOnFailureListener {
                 callback(false)
@@ -117,7 +106,7 @@ class AddUserDialog(private val context: Context, private val firestore: Firebas
 
     private fun addAdminToDatabase(email: String, name: String) {
         firestore.collection("admins").document(email)
-            .set("name" to name)
+            .set(mapOf("name" to name))
             .addOnSuccessListener {
                 Toast.makeText(context, "Admin berhasil ditambahkan.", Toast.LENGTH_SHORT).show()
             }
@@ -126,7 +115,7 @@ class AddUserDialog(private val context: Context, private val firestore: Firebas
             }
     }
 
-    private fun addDoctorToDatabase(email: String, name: String, specialization: String, fee: String, experience: String) {
+    private fun addDoctorToDatabase(email: String, name: String, specialization: String, fee: Int, experience: Int) {
         firestore.collection("doctors").document(email)
             .set(
                 mapOf(
@@ -144,3 +133,5 @@ class AddUserDialog(private val context: Context, private val firestore: Firebas
             }
     }
 }
+
+
