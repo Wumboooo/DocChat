@@ -1,12 +1,18 @@
 package com.example.docchat.ui.chat
 
+import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
+import android.graphics.Bitmap
+import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -18,6 +24,10 @@ import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.ui.Message
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
+import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.StorageReference
+import java.io.ByteArrayOutputStream
 
 class ChatActivity : AppCompatActivity() {
     private lateinit var firestore: FirebaseFirestore
@@ -31,6 +41,11 @@ class ChatActivity : AppCompatActivity() {
     private val messages = mutableListOf<Message>()
     private var chatId: String? = null
 
+    private lateinit var imageButtonUpload: ImageButton
+    private val PICK_IMAGE_REQUEST = 1
+    private val CAMERA_REQUEST = 2
+    private lateinit var storageReference: StorageReference
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_chat)
@@ -38,15 +53,15 @@ class ChatActivity : AppCompatActivity() {
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        // **Pastikan Firestore sudah diinisialisasi sebelum digunakan**
         firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
 
+        storageReference = FirebaseStorage.getInstance().reference
         recyclerView = findViewById(R.id.recyclerView)
         messageEditText = findViewById(R.id.messageEditText)
+        imageButtonUpload = findViewById(R.id.imageButtonUpload)
         sendButton = findViewById(R.id.sendButton)
 
-        // **Baru inisialisasi repository dan ViewModel setelah firestore siap**
         val chatRepository = ChatRepository(firestore)
         val factory = ChatViewModelFactory(chatRepository)
         chatViewModel = ViewModelProvider(this, factory).get(ChatViewModel::class.java)
@@ -61,7 +76,12 @@ class ChatActivity : AppCompatActivity() {
 
         val currentUserEmail = auth.currentUser?.email ?: ""
         recyclerView.layoutManager = LinearLayoutManager(this)
-        chatAdapter = ChatAdapter(messages, currentUserEmail)
+        chatAdapter = ChatAdapter(messages, currentUserEmail) { imageUrl ->
+            val intent = Intent(this, PhotoViewActivity::class.java)
+            intent.putExtra("imageUrl", imageUrl)
+            startActivity(intent)
+        }
+
         recyclerView.adapter = chatAdapter
 
 
@@ -74,6 +94,25 @@ class ChatActivity : AppCompatActivity() {
 
         chatViewModel.loadMessages(chatId!!)
 
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            val user = FirebaseAuth.getInstance().currentUser
+            user?.let {
+                FirebaseFirestore.getInstance().collection("users")
+                    .document(user.email!!)
+                    .update("fcmToken", token)
+                    .addOnSuccessListener {
+                        Log.d("Firebase", "FCM Token saved successfully")
+                    }
+                    .addOnFailureListener {
+                        Log.e("Firebase", "Failed to save FCM Token", it)
+                    }
+            }
+        }
+
+        imageButtonUpload.setOnClickListener {
+            showImagePickerDialog()
+        }
+
         sendButton.setOnClickListener {
             val text = messageEditText.text.toString()
             chatViewModel.sendMessage(chatId!!, auth, text, this)
@@ -84,7 +123,7 @@ class ChatActivity : AppCompatActivity() {
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_chat, menu)
         menu?.findItem(R.id.menu_forward)?.isVisible = globalRole == "admin"
-        menu?.findItem(R.id.menu_end_session)?.isVisible = globalRole == "doctor"
+        menu?.findItem(R.id.menu_end_session)?.isVisible = globalRole != "user"
         menu?.findItem(R.id.menu_summary)?.isVisible = globalRole == "doctor"
 
         return true
@@ -108,6 +147,76 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == PICK_IMAGE_REQUEST && data != null) {
+                val imageUri = data.data
+                uploadImage(imageUri)
+            } else if (requestCode == CAMERA_REQUEST && data != null) {
+                val imageBitmap = data.extras?.get("data") as Bitmap
+                val imageUri = getImageUriFromBitmap(imageBitmap)
+                uploadImage(imageUri)
+            }
+        }
+    }
+
+    private fun getImageUriFromBitmap(bitmap: Bitmap): Uri {
+        val bytes = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes)
+        val path = MediaStore.Images.Media.insertImage(contentResolver, bitmap, "IMG_" + System.currentTimeMillis(), null)
+        return Uri.parse(path)
+    }
+
+    private fun uploadImage(imageUri: Uri?) {
+        if (imageUri == null) return
+
+        val fileRef = storageReference.child("${System.currentTimeMillis()}.jpg")
+        fileRef.putFile(imageUri)
+            .addOnSuccessListener {
+                fileRef.downloadUrl.addOnSuccessListener { uri ->
+                    sendImageMessage(uri.toString())
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Upload gagal", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun sendImageMessage(imageUrl: String) {
+        val message = mapOf(
+            "senderEmail" to auth.currentUser?.email,
+            "imageUrl" to imageUrl,
+            "timestamp" to System.currentTimeMillis()
+        )
+
+        firestore.collection("chats").document(chatId!!)
+            .collection("messages").add(message)
+    }
+
+    private fun showImagePickerDialog() {
+        val options = arrayOf("Ambil Foto", "Pilih dari Galeri")
+        AlertDialog.Builder(this)
+            .setTitle("Upload Gambar")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> openCamera()
+                    1 -> openGallery()
+                }
+            }
+            .show()
+    }
+
+    private fun openCamera() {
+        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        startActivityForResult(intent, CAMERA_REQUEST)
+    }
+
+    private fun openGallery() {
+        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
+        startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    }
+
     private fun forwardMessage() {
         chatViewModel.forwardMessage(firestore, chatId!!) { success, doctorList ->
             if (!success || doctorList == null) {
@@ -122,7 +231,6 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun createNewChatWithDoctor(doctorEmail: String) {
-        // Mendapatkan email dari participants array di chatId saat ini
         val chatRef = firestore.collection("chats").document(chatId!!)
         chatRef.get().addOnSuccessListener { document ->
             val participants = document.get("participants") as? List<*>
@@ -206,11 +314,19 @@ class ChatActivity : AppCompatActivity() {
     }
 
     private fun endSession() {
-        firestore.collection("chats").document(chatId!!)
-            .update("status", "closed")
-            .addOnSuccessListener {
-                Toast.makeText(this, "Sesi berakhir. Tidak bisa mengirim pesan lagi.", Toast.LENGTH_SHORT).show()
-                finish()
+        AlertDialog.Builder(this)
+            .setTitle("Konfirmasi Hapus")
+            .setMessage("Apakah Anda yakin ingin menghapus menutup obrolan?")
+            .setPositiveButton("Hapus") { _, _ ->
+                firestore.collection("chats").document(chatId!!)
+                    .update("status", "closed")
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "Sesi berakhir. Tidak bisa mengirim pesan lagi.", Toast.LENGTH_SHORT).show()
+                        finish()
+                    }
             }
+            .setNegativeButton("Batal", null)
+            .show()
+
     }
 }

@@ -12,9 +12,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.docchat.R
 import com.example.docchat.SplashScreenActivity.Companion.globalRole
+import com.example.docchat.ui.Chat
 import com.example.docchat.ui.chat.ChatActivity
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 
 class HomeFragment : Fragment() {
@@ -32,7 +34,6 @@ class HomeFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
         auth = FirebaseAuth.getInstance()
-        val firestore = FirebaseFirestore.getInstance()
         val repository = HomeRepository(firestore)
 
         viewModel = ViewModelProvider(
@@ -40,17 +41,23 @@ class HomeFragment : Fragment() {
             ViewModelFactory(repository)
         )[HomeViewModel::class.java]
 
-
         recyclerView = view.findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(context)
-        chatAdapter = HomeAdapter(emptyList()) { chat ->
-            openChat(chat.chatId)
-        }
+        chatAdapter = HomeAdapter(emptyList(),
+            { chat -> openChat(chat.chatId) },
+            { chat -> deleteChat(chat) }
+        )
         recyclerView.adapter = chatAdapter
 
         viewModel.chats.observe(viewLifecycleOwner) { chats ->
-            chatAdapter.updateChats(chats)
+            val currentEmail = auth.currentUser?.email ?: return@observe
+
+            val filteredChats = chats.filter { chat ->
+                !(chat.archivedBy.contains(currentEmail)) // Hanya tampilkan chat yang belum diarsipkan user
+            }
+            chatAdapter.updateChats(filteredChats)
         }
+
 
         viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
             Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
@@ -60,7 +67,6 @@ class HomeFragment : Fragment() {
 
         startChatButton = view.findViewById(R.id.startChat)
 
-        Toast.makeText(context, "Role: $globalRole", Toast.LENGTH_SHORT).show()
         if (globalRole == "user") {
             startChatButton.visibility = View.VISIBLE
         } else {
@@ -84,46 +90,91 @@ class HomeFragment : Fragment() {
         val currentUser = auth.currentUser ?: return
         val currentEmail = currentUser.email ?: return
 
+        firestore.collection("chats")
+            .whereArrayContains("participants", currentEmail)
+            .whereEqualTo("status", "active")
+            .get()
+            .addOnSuccessListener { chatQuery ->
+                if (!chatQuery.isEmpty) {
+                    openChat(chatQuery.documents.first().id)
+                } else {
+                    assignAdminAndCreateChat(currentEmail)
+                }
+            }
+    }
+
+    private fun assignAdminAndCreateChat(currentEmail: String) {
         firestore.collection("admins")
-            .limit(1)
             .get()
             .addOnSuccessListener { adminQuery ->
-                if (!adminQuery.isEmpty) {
-                    val adminEmail = adminQuery.documents.first().id
-                    if (adminEmail.isEmpty()) {
-                        Toast.makeText(context, "Admin email not found.", Toast.LENGTH_SHORT).show()
-                        return@addOnSuccessListener
-                    }
+                val admins = adminQuery.documents.map { it.id }
 
-                    val participants = listOf(currentEmail, adminEmail).sorted()
+                if (admins.isEmpty()) {
+                    Toast.makeText(context, "Tidak ada admin tersedia.", Toast.LENGTH_SHORT).show()
+                    return@addOnSuccessListener
+                }
 
-                    firestore.collection("chats")
-                        .whereArrayContains("participants", currentEmail)
-                        .get()
-                        .addOnSuccessListener { chatQuery ->
-                            val existingChat = chatQuery.documents.find { doc ->
-                                val chatParticipants = (doc.get("participants") as? List<*>)?.map { it.toString() }?.sorted()
-                                chatParticipants == participants
-                            }
-                            if (existingChat != null) {
-                                openChat(existingChat.id)
-                            } else {
-                                val newChat = mapOf(
-                                    "participants" to participants,
-                                    "lastMessage" to "Start of chat",
-                                    "lastUpdated" to System.currentTimeMillis(),
-                                    "status" to "active"
-                                )
-                                firestore.collection("chats")
-                                    .add(newChat)
-                                    .addOnSuccessListener { docRef ->
-                                        openChat(docRef.id)
-                                    }
+                // Ambil jumlah chat aktif dari setiap admin
+                firestore.collection("chats")
+                    .whereEqualTo("status", "active")
+                    .get()
+                    .addOnSuccessListener { chatQuery ->
+                        val adminChatCount = mutableMapOf<String, Int>()
+
+                        // Inisialisasi jumlah chat aktif setiap admin
+                        admins.forEach { adminChatCount[it] = 0 }
+
+                        // Hitung jumlah chat aktif per admin
+                        chatQuery.documents.forEach { doc ->
+                            val participants = doc.get("participants") as? List<String> ?: emptyList()
+                            participants.forEach { participant ->
+                                if (admins.contains(participant)) {
+                                    adminChatCount[participant] = adminChatCount.getOrDefault(participant, 0) + 1
+                                }
                             }
                         }
-                } else {
-                    Toast.makeText(context, "No admin available.", Toast.LENGTH_SHORT).show()
-                }
+
+                        // Pilih admin dengan jumlah chat aktif paling sedikit
+                        val minChats = adminChatCount.values.minOrNull() ?: 0
+                        val leastBusyAdmins = adminChatCount.filterValues { it == minChats }.keys
+
+                        val selectedAdmin = leastBusyAdmins.random() // Pilih secara acak jika ada beberapa admin dengan jumlah chat yang sama
+
+                        createNewChat(currentEmail, selectedAdmin)
+                    }
+            }
+    }
+
+
+    private fun createNewChat(currentEmail: String, adminEmail: String) {
+        val participants = listOf(currentEmail, adminEmail)
+
+        val newChat = mapOf(
+            "participants" to participants,
+            "lastMessage" to "Start of chat",
+            "lastUpdated" to System.currentTimeMillis(),
+            "status" to "active"
+        )
+
+        firestore.collection("chats")
+            .add(newChat)
+            .addOnSuccessListener { docRef ->
+                openChat(docRef.id)
+            }
+    }
+
+    private fun deleteChat(chat: Chat) {
+        val currentUser = auth.currentUser ?: return
+        val currentEmail = currentUser.email ?: return
+
+        firestore.collection("chats").document(chat.chatId)
+            .update("archivedBy", FieldValue.arrayUnion(currentEmail)) // Tambahkan email ke archivedBy
+            .addOnSuccessListener {
+                Toast.makeText(context, "Chat diarsipkan", Toast.LENGTH_SHORT).show()
+                loadChats() // Refresh daftar chat setelah "penghapusan"
+            }
+            .addOnFailureListener {
+                Toast.makeText(context, "Gagal mengarsipkan chat", Toast.LENGTH_SHORT).show()
             }
     }
 

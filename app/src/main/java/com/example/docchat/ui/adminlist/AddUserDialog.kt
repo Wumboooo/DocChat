@@ -95,14 +95,24 @@ class AddUserDialog(
     }
 
     private fun validateEmail(email: String, callback: (Boolean) -> Unit) {
-        firestore.collection("users").document(email).get()
-            .addOnSuccessListener { document ->
-                callback(!document.exists())
+        val adminsRef = firestore.collection("admins").document(email)
+        val doctorsRef = firestore.collection("doctors").document(email)
+
+        adminsRef.get().addOnSuccessListener { adminDoc ->
+            if (adminDoc.exists()) {
+                callback(false) // Email sudah digunakan di koleksi admins
+            } else {
+                doctorsRef.get().addOnSuccessListener { doctorDoc ->
+                    callback(!doctorDoc.exists()) // Email tersedia jika tidak ada di koleksi doctors
+                }.addOnFailureListener {
+                    callback(false) // Error saat membaca Firestore
+                }
             }
-            .addOnFailureListener {
-                callback(false)
-            }
+        }.addOnFailureListener {
+            callback(false) // Error saat membaca Firestore
+        }
     }
+
 
     private fun addAdminToDatabase(email: String, name: String) {
         firestore.collection("admins").document(email)

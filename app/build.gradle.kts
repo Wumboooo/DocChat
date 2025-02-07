@@ -57,6 +57,11 @@ android {
         viewBinding = true
         buildConfig = true
     }
+    packaging {
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+        }
+    }
 }
 
 dependencies {
@@ -76,6 +81,12 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.5")
+
+    // Untuk HTTP request ke Firebase Cloud Messaging (FCM)
+    implementation("com.squareup.okhttp3:okhttp:4.9.3")
+
+    // Untuk memproses JSON
+    implementation("org.json:json:20210307")
 
     // layout resources
     implementation("com.airbnb.android:lottie:6.1.0")
@@ -146,4 +157,13 @@ dependencies {
 
     // material
     implementation("com.google.android.material:material:1.12.0")
+
+    // photo messaging
+    implementation("com.google.firebase:firebase-storage:21.0.1")
+    implementation("com.github.dhaval2404:imagepicker:2.1")
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
+    //notification messaging
+    implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
+    implementation("com.google.auth:google-auth-library-oauth2-http:1.16.0")
 }

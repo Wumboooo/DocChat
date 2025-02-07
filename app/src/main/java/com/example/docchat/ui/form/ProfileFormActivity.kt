@@ -104,9 +104,9 @@ class ProfileFormActivity : AppCompatActivity() {
     }
 
     private fun setupLocationField() {
-        val locationField = findViewById<EditText>(R.id.locationSearchField)
-        locationField.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP && isDrawableEndClicked(event, locationField)) {
+        locationSearchField = findViewById(R.id.locationSearchField)
+        locationSearchField.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_UP && isDrawableEndClicked(event, locationSearchField)) {
                 requestLocationFromGps()
                 true
             } else false

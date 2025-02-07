@@ -20,6 +20,7 @@ import com.example.docchat.ui.ChatSummary
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 
 class ProfileFragment : Fragment() {
     private lateinit var firestore: FirebaseFirestore
@@ -150,7 +151,7 @@ class ProfileFragment : Fragment() {
         )
 
         firestore.collection("chats").document(summaryId)
-            .update("summary", summaryData)
+            .set(summaryData, SetOptions.merge())
             .addOnSuccessListener {
                 Toast.makeText(context, "Ringkasan berhasil diperbarui.", Toast.LENGTH_SHORT).show()
             }
