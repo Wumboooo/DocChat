@@ -21,7 +21,7 @@ class SplashScreenActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContentView(R.layout.activity_splash_screen)
-        window.navigationBarColor = resources.getColor(R.color.darkerblue, theme)
+        window.navigationBarColor = resources.getColor(R.color.white, theme)
 
         auth = FirebaseAuth.getInstance()
         userRepository = UserRepository(FirebaseFirestore.getInstance())

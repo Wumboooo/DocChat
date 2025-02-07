@@ -28,6 +28,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.navigationBarColor = resources.getColor(R.color.darkgreen, theme)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)

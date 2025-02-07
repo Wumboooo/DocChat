@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="darkgreen">#12372A</color>
+    <color name="green">#436850</color>
+    <color name="lightgreen">#ADBC9F</color>
     <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="darkerblue">#16325B</color>
-    <color name="skyblue">#78B7D0</color>
-    <color name="darkblue">#227B94</color>
-    <color name="coral">#FFDC7F</color>
+    <color name="white">#FBFADA</color>
 
 </resources>

@@ -5,15 +5,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:orientation="vertical"
     android:gravity="center"
-    android:backgroundTint="@color/darkerblue"
+    android:backgroundTint="@color/white"
     android:background="?android:attr/windowBackground"
     tools:context=".SplashScreenActivity">
 
-    <TextView
+    <ImageView
         android:id="@+id/logoImageView"
-        android:layout_width="wrap_content"
+        android:layout_width="300dp"
         android:layout_height="wrap_content"
-        android:src="@drawable/arabis"
+        android:src="@drawable/klinikjaya"
         android:text="DocChat"
         android:textSize="30sp"
         android:textColor="@color/white"

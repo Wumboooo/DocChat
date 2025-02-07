@@ -5,26 +5,27 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:gravity="center"
-    android:backgroundTint="@color/darkerblue"
+    android:backgroundTint="@color/white"
     android:background="?android:attr/windowBackground">
 
-    <TextView
+    <ImageView
         android:id="@+id/logoImageView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/arabis"
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:adjustViewBounds="false"
+        android:contentDescription="@string/app_name"
+        android:src="@drawable/klinikjaya1"
         android:text="DocChat"
-        android:textSize="34sp"
-        android:textColor="@color/white"
-        android:contentDescription="@string/app_name" />
+        android:textColor="@color/darkgreen"
+        android:textSize="34sp" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Welcome to DocChat"
-        android:textSize="24sp"
+        android:text="Welcome to Klinik Jaya Mobile"
+        android:textSize="20sp"
         android:layout_marginTop="16dp"
-        android:textColor="@color/white" />
+        android:textColor="@color/darkgreen" />
 
     <com.google.android.gms.common.SignInButton
         android:id="@+id/signInButton"
