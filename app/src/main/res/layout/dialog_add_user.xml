@@ -18,6 +18,12 @@
         android:hint="Nama" />
 
     <Spinner
+        android:id="@+id/tierRoleSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <Spinner
         android:id="@+id/roleSpinner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

@@ -21,7 +21,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.docchat.R
 import com.example.docchat.SplashScreenActivity.Companion.globalRole
-import com.example.docchat.ui.Message
+import com.example.docchat.ui.Messages
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
@@ -38,7 +38,7 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var sendButton: Button
     private lateinit var chatViewModel: ChatViewModel
 
-    private val messages = mutableListOf<Message>()
+    private val messages = mutableListOf<Messages>()
     private var chatId: String? = null
 
     private lateinit var imageButtonUpload: ImageButton
@@ -161,6 +161,19 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
+    private fun forwardMessage() {
+        chatViewModel.forwardMessage(firestore, chatId!!) { success, doctorList ->
+            if (!success || doctorList == null) {
+                Toast.makeText(this, "Tidak ada dokter tersedia.", Toast.LENGTH_SHORT).show()
+                return@forwardMessage
+            }
+
+            ChatHelper.showDoctorSelectionDialog(this, doctorList) { doctorEmail ->
+                createNewChatWithDoctor(doctorEmail)
+            }
+        }
+    }
+
     private fun getImageUriFromBitmap(bitmap: Bitmap): Uri {
         val bytes = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes)
@@ -215,19 +228,6 @@ class ChatActivity : AppCompatActivity() {
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         startActivityForResult(intent, PICK_IMAGE_REQUEST)
-    }
-
-    private fun forwardMessage() {
-        chatViewModel.forwardMessage(firestore, chatId!!) { success, doctorList ->
-            if (!success || doctorList == null) {
-                Toast.makeText(this, "Tidak ada dokter tersedia.", Toast.LENGTH_SHORT).show()
-                return@forwardMessage
-            }
-
-            ChatHelper.showDoctorSelectionDialog(this, doctorList) { doctorEmail ->
-                createNewChatWithDoctor(doctorEmail)
-            }
-        }
     }
 
     private fun createNewChatWithDoctor(doctorEmail: String) {

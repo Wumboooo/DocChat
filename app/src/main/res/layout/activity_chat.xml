@@ -44,13 +44,14 @@
             android:src="@drawable/baseline_add_photo_alternate_24"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Upload Image"
+            android:visibility="gone"
             android:scaleType="fitCenter"/>
 
         <Button
             android:id="@+id/sendButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Send" />
+            android:text="Kirim" />
     </LinearLayout>
 
 </LinearLayout>

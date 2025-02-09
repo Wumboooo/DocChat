@@ -4,6 +4,7 @@
     <color name="green">#436850</color>
     <color name="lightgreen">#ADBC9F</color>
     <color name="black">#FF000000</color>
-    <color name="white">#FBFADA</color>
+    <color name="white">#ffffff</color>
+<!--    <color name="white">#FBFADA</color>-->
 
 </resources>

@@ -2,20 +2,20 @@ package com.example.docchat.ui.chat
 
 import android.content.Context
 import android.widget.Toast
-import com.example.docchat.ui.Message
+import com.example.docchat.ui.Messages
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 
 class ChatRepository(private val firestore: FirebaseFirestore) {
 
-    fun loadMessages(chatId: String, onMessagesLoaded: (List<Message>) -> Unit) {
+    fun loadMessages(chatId: String, onMessagesLoaded: (List<Messages>) -> Unit) {
         val chatRef = firestore.collection("chats").document(chatId)
         chatRef.collection("messages")
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, _ ->
                 if (snapshot != null) {
-                    val messages = snapshot.documents.mapNotNull { it.toObject(Message::class.java) }
+                    val messages = snapshot.documents.mapNotNull { it.toObject(Messages::class.java) }
                     onMessagesLoaded(messages)
                 }
             }

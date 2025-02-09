@@ -23,6 +23,7 @@ class AdminAdapter(
     class AdminViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvAdminName: TextView = itemView.findViewById(R.id.tvAdminName)
         val tvAdminEmail: TextView = itemView.findViewById(R.id.tvAdminEmail)
+        val tvAdminTier: TextView = itemView.findViewById(R.id.tvAdminTier)
         val btnDelete: ImageButton = itemView.findViewById(R.id.btnDelete)
         val btnEdit: ImageButton = itemView.findViewById(R.id.btnEdit)
     }
@@ -36,6 +37,7 @@ class AdminAdapter(
         val admin = adminList[position]
         holder.tvAdminName.text = admin.name
         holder.tvAdminEmail.text = admin.email
+        holder.tvAdminTier.text = admin.tier
 
         if (admin.email == currentEmail) {
             holder.btnDelete.visibility = View.GONE

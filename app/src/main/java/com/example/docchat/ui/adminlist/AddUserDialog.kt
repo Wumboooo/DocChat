@@ -25,6 +25,7 @@ class AddUserDialog(
         val view = LayoutInflater.from(context).inflate(R.layout.dialog_add_user, null)
         val emailEditText = view.findViewById<EditText>(R.id.emailEditText)
         val nameEditText = view.findViewById<EditText>(R.id.nameEditText)
+        val tierRoleSpinner = view.findViewById<Spinner>(R.id.tierRoleSpinner)
         val specializationEditText = view.findViewById<EditText>(R.id.specializationEditText)
         val feeEditText = view.findViewById<EditText>(R.id.feeEditText)
         val experienceEditText = view.findViewById<EditText>(R.id.experienceEditText)
@@ -34,18 +35,23 @@ class AddUserDialog(
         feeEditText.visibility = View.GONE
         experienceEditText.visibility = View.GONE
 
+        val tiers = arrayOf("basic", "master")
         val roles = arrayOf("Admin", "Dokter")
+        val tiersAdapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, tiers)
         val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, roles)
+        tierRoleSpinner.adapter = tiersAdapter
         roleSpinner.adapter = adapter
 
         roleSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 val selectedRole = roles[position]
                 if (selectedRole == "Admin") {
+                    tierRoleSpinner.visibility = View.VISIBLE
                     specializationEditText.visibility = View.GONE
                     feeEditText.visibility = View.GONE
                     experienceEditText.visibility = View.GONE
                 } else {
+                    tierRoleSpinner.visibility = View.GONE
                     specializationEditText.visibility = View.VISIBLE
                     feeEditText.visibility = View.VISIBLE
                     experienceEditText.visibility = View.VISIBLE
@@ -59,6 +65,7 @@ class AddUserDialog(
         builder.setPositiveButton("Tambah") { _, _ ->
             val email = emailEditText.text.toString().trim()
             val name = nameEditText.text.toString().trim()
+            val tier = tierRoleSpinner.selectedItem.toString()
             val role = roleSpinner.selectedItem.toString()
 
             if (email.isEmpty() || name.isEmpty()) {
@@ -83,7 +90,7 @@ class AddUserDialog(
 
                         addDoctorToDatabase(email, name, specialization, fee, experience)
                     } else {
-                        addAdminToDatabase(email, name)
+                        addAdminToDatabase(email, name, tier)
                     }
                 } else {
                     Toast.makeText(context, "Email sudah digunakan.", Toast.LENGTH_SHORT).show()
@@ -114,9 +121,9 @@ class AddUserDialog(
     }
 
 
-    private fun addAdminToDatabase(email: String, name: String) {
+    private fun addAdminToDatabase(email: String, name: String, tier: String) {
         firestore.collection("admins").document(email)
-            .set(mapOf("name" to name))
+            .set(mapOf("name" to name, "tier" to tier))
             .addOnSuccessListener {
                 Toast.makeText(context, "Admin berhasil ditambahkan.", Toast.LENGTH_SHORT).show()
             }

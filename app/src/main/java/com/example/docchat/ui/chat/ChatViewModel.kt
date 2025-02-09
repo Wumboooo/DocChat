@@ -6,15 +6,15 @@ import androidx.datastore.core.IOException
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.example.docchat.ui.Message
-import com.google.android.gms.auth.GoogleAuthUtil
-import com.google.android.gms.auth.api.signin.GoogleSignIn
+import androidx.lifecycle.viewModelScope
+import com.example.docchat.ui.Messages
+import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -25,8 +25,8 @@ import okhttp3.Response
 import org.json.JSONObject
 
 class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
-    private val _messages = MutableLiveData<List<Message>>()
-    val messages: LiveData<List<Message>> get() = _messages
+    private val _messages = MutableLiveData<List<Messages>>()
+    val messages: LiveData<List<Messages>> get() = _messages
 
     fun loadMessages(chatId: String) {
         chatRepository.loadMessages(chatId) { newMessages ->
@@ -36,7 +36,7 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
 
     fun sendMessage(chatId: String, auth: FirebaseAuth, text: String, context: Context) {
         chatRepository.sendMessage(chatId, auth, text, context) {
-            sendPushNotification(chatId, text, context) // Pastikan ini tidak mengharapkan parameter
+            sendPushNotification(chatId, text, context)
         }
     }
 
@@ -47,6 +47,8 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
             .addOnSuccessListener { document ->
                 if (document.exists()) {
                     val participants = document.get("participants") as? List<String> ?: emptyList()
+                    Log.d("FCM", "Participants: $participants")
+
                     for (participant in participants) {
                         if (participant != FirebaseAuth.getInstance().currentUser?.email) {
                             FirebaseFirestore.getInstance().collection("users")
@@ -54,68 +56,76 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
                                 .get()
                                 .addOnSuccessListener { userDoc ->
                                     val fcmToken = userDoc.getString("fcmToken")
+                                    Log.d("FCM", "FCM Token for $participant: $fcmToken")
                                     fcmToken?.let {
-                                        sendNotificationToUser(it, message, context)
+                                        sendFCMRequest(it, message, context)
                                     }
+                                }
+                                .addOnFailureListener { e ->
+                                    Log.e("FCM", "Failed to fetch user data: ${e.message}")
                                 }
                         }
                     }
                 }
             }
-    }
-
-    private fun sendNotificationToUser(token: String, message: String, context: Context) {
-        val googleSignInAccount = GoogleSignIn.getLastSignedInAccount(context)
-        googleSignInAccount?.let { account ->
-            account.account?.let { googleAccount ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        val oauth2Key = GoogleAuthUtil.getToken(
-                            context,
-                            googleAccount,
-                            "oauth2:https://www.googleapis.com/auth/cloud-platform"
-                        )
-
-                        sendFCMRequest(oauth2Key, token, message)
-                    } catch (e: Exception) {
-                        Log.e("FCM", "Failed to get OAuth2 token: ${e.message}")
-                    }
-                }
+            .addOnFailureListener { e ->
+                Log.e("FCM", "Failed to fetch chat document: ${e.message}")
             }
-        }
     }
 
-    private fun sendFCMRequest(oauth2Key: String, token: String, message: String) {
-        val jsonObject = JSONObject().apply {
-            put("message", JSONObject().apply {
-                put("token", token)
-                put("notification", JSONObject().apply {
-                    put("title", "Pesan Baru")
-                    put("body", message)
+    private fun sendFCMRequest(fcmToken: String, message: String, context: Context) {
+        viewModelScope.launch {
+            val authToken = getAccessToken(context)
+            if (authToken == null) {
+                Log.e("FCM", "Failed to obtain OAuth token")
+                return@launch
+            }
+
+            val jsonObject = JSONObject().apply {
+                put("message", JSONObject().apply {
+                    put("token", fcmToken)  // Use the recipient's FCM token, not OAuth token!
+                    put("notification", JSONObject().apply {
+                        put("title", "Pesan Baru")
+                        put("body", message)
+                    })
                 })
+            }
+
+            val requestBody = jsonObject.toString().toRequestBody("application/json".toMediaTypeOrNull())
+            val client = OkHttpClient()
+            val request = Request.Builder()
+                .url("https://fcm.googleapis.com/v1/projects/docchat-187c2/messages:send")
+                .post(requestBody)
+                .addHeader("Authorization", "Bearer $authToken")  // Corrected token usage
+                .addHeader("Content-Type", "application/json")
+                .build()
+
+            client.newCall(request).enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    Log.e("FCM", "Error sending notification: ${e.message}")
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    Log.d("FCM", "Notification sent successfully: ${response.code}, ${response.body?.string()}")
+                }
             })
         }
-
-        val requestBody = jsonObject.toString()
-        val client = OkHttpClient()
-        val request = Request.Builder()
-            .url("https://fcm.googleapis.com/v1/projects/docchat-187c2/messages:send")
-            .post(requestBody.toRequestBody("application/json".toMediaTypeOrNull()))
-            .addHeader("Authorization", "Bearer $oauth2Key")
-            .addHeader("Content-Type", "application/json")
-            .build()
-
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                Log.e("FCM", "Error sending notification: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                Log.d("FCM", "Notification sent successfully: ${response.body?.string()}")
-            }
-        })
     }
 
+    private suspend fun getAccessToken(context: Context): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val credentials = GoogleCredentials
+                    .fromStream(context.assets.open("service-account-key.json"))
+                    .createScoped(listOf("https://www.googleapis.com/auth/firebase.messaging")) // Correct scope for FCM
+                credentials.refreshIfExpired()
+                credentials.accessToken.tokenValue
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
 
     fun forwardMessage(firestore: FirebaseFirestore, chatId: String, callback: (Boolean, List<DocumentSnapshot>?) -> Unit) {
         val doctorsRef = firestore.collection("doctors")

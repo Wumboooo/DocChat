@@ -8,14 +8,14 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.example.docchat.ui.Message
+import com.example.docchat.ui.Messages
 import com.example.docchat.R
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class ChatAdapter(
-    private val messages: List<Message>,
+    private val messages: List<Messages>,
     private val currentUserEmail: String,
     private val onImageClick: (String) -> Unit // Tambahkan callback klik gambar
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
@@ -54,7 +54,7 @@ class ChatAdapter(
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
         private val imageView: ImageView = itemView.findViewById(R.id.messageImageView)
 
-        fun bind(message: Message) {
+        fun bind(message: Messages) {
             timestampTextView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
 
             if (message.imageUrl != null) {
@@ -80,7 +80,7 @@ class ChatAdapter(
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
         private val imageView: ImageView = itemView.findViewById(R.id.messageImageView)
 
-        fun bind(message: Message) {
+        fun bind(message: Messages) {
             timestampTextView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
 
             if (message.imageUrl != null) {

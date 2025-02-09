@@ -1,7 +1,6 @@
 package com.example.docchat.ui.form
 
 import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.FirebaseException
@@ -52,6 +51,39 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
         fun onVerificationFailed(error: String)
     }
 
+//    fun startPhoneVerification(phoneNumber: String, activity: AppCompatActivity, callback: PhoneVerificationCallback) {
+//        val options = PhoneAuthOptions.newBuilder(auth)
+//            .setPhoneNumber(phoneNumber)
+//            .setTimeout(60L, TimeUnit.SECONDS)
+//            .setActivity(activity)
+//            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+//                override fun onVerificationCompleted(credential: PhoneAuthCredential) {
+//                    auth.signInWithCredential(credential)
+//                        .addOnCompleteListener { task ->
+//                            if (task.isSuccessful) {
+//                                callback.onVerificationComplete()
+//                            } else {
+//                                callback.onVerificationFailed(task.exception?.message ?: "Unknown error")
+//                            }
+//                        }
+//                }
+//
+//                override fun onVerificationFailed(e: FirebaseException) {
+//                    callback.onVerificationFailed(e.message ?: "Unknown error")
+//                }
+//
+//                override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
+//                    val intent = Intent(context, OTPConfirmationActivity::class.java).apply {
+//                        putExtra("verificationId", verificationId)
+//                        putExtra("phoneNumber", phoneNumber)
+//                    }
+//                    context.startActivity(intent)
+//                }
+//            }).build()
+//
+//        PhoneAuthProvider.verifyPhoneNumber(options)
+//    }
+
     fun startPhoneVerification(phoneNumber: String, activity: AppCompatActivity, callback: PhoneVerificationCallback) {
         val options = PhoneAuthOptions.newBuilder(auth)
             .setPhoneNumber(phoneNumber)
@@ -74,11 +106,8 @@ class FirebaseHelper(private val context: Context, private val auth: FirebaseAut
                 }
 
                 override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
-                    val intent = Intent(context, OTPConfirmationActivity::class.java).apply {
-                        putExtra("verificationId", verificationId)
-                        putExtra("phoneNumber", phoneNumber)
-                    }
-                    context.startActivity(intent)
+                    // Langsung lanjutkan ke MainActivity
+                    callback.onVerificationComplete()
                 }
             }).build()
 

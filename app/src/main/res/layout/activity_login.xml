@@ -14,7 +14,7 @@
         android:layout_height="200dp"
         android:adjustViewBounds="false"
         android:contentDescription="@string/app_name"
-        android:src="@drawable/klinikjaya1"
+        android:src="@drawable/klinikjayaicon"
         android:text="DocChat"
         android:textColor="@color/darkgreen"
         android:textSize="34sp" />

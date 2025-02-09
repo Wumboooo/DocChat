@@ -112,7 +112,7 @@ class ProfileFragment : Fragment() {
         medicineEditText.setText(summary.medicine)
 
         // Ensure Enter adds a new line
-        diseaseEditText.setOnKeyListener { v, keyCode, event ->
+        diseaseEditText.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
                 diseaseEditText.append("\n")
                 true
@@ -121,7 +121,7 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        medicineEditText.setOnKeyListener { v, keyCode, event ->
+        medicineEditText.setOnKeyListener { _, keyCode, event ->
             if (keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN) {
                 medicineEditText.append("\n")
                 true

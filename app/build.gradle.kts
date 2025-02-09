@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,15 +11,6 @@ android {
     namespace = "com.example.docchat"
     compileSdk = 35
 
-    // Membaca API Key dari local.properties
-    val localProperties = Properties()
-    val localPropertiesFile = rootProject.file("local.properties")
-    if (localPropertiesFile.exists()) {
-        localProperties.load(localPropertiesFile.inputStream())
-    }
-    val geoApiKey = localProperties.getProperty("GEO_API_KEY") ?: ""
-    val webApiKey = localProperties.getProperty("WEB_API_KEY") ?: ""
-
     defaultConfig {
         applicationId = "com.example.docchat"
         minSdk = 24
@@ -30,11 +19,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-//
-//        buildConfigField("String", "GEO_API_KEY", "\"$geoApiKey\"")
-//        buildConfigField("String", "WEB_API_KEY", "\"$webApiKey\"")
-//        resValue("string", "GEO_API_KEY", "\"$geoApiKey\"")
-//        resValue("string", "WEB_API_KEY", "\"$webApiKey\"")
+
+
     }
 
     buildTypes {
@@ -44,6 +30,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "GEO_API_KEY", "\"${properties["GEO_API_KEY"]}\"")
+            buildConfigField("String", "WEB_API_KEY", "\"${properties["WEB_API_KEY"]}\"")
+            buildConfigField("String", "oauth2key", "\"${properties["oauth2key"]}\"")
         }
     }
     compileOptions {
@@ -166,4 +155,6 @@ dependencies {
     //notification messaging
     implementation("com.google.firebase:firebase-messaging-ktx:24.1.0")
     implementation("com.google.auth:google-auth-library-oauth2-http:1.16.0")
+    implementation("com.onesignal:OneSignal:4.8.6")
+
 }

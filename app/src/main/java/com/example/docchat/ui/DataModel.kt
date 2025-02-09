@@ -1,6 +1,6 @@
 package com.example.docchat.ui
 
-data class Message(
+data class Messages(
     val senderEmail: String = "",
     val imageUrl: String? = null,
     val text: String = "",
@@ -29,7 +29,8 @@ data class ChatSummary(
 
 data class Admin(
     var email: String = "",
-    val name: String = ""
+    val name: String = "",
+    val tier: String = ""
 )
 
 data class Doctor(
