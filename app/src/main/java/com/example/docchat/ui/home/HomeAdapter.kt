@@ -20,8 +20,15 @@ class HomeAdapter(
     private val onDeleteClick: (Chat) -> Unit
 ) : RecyclerView.Adapter<HomeAdapter.HomeViewHolder>() {
 
+    private var unreadCounts: Map<String, Int> = emptyMap()
+
     fun updateChats(newChats: List<Chat>) {
         chats = newChats
+        notifyDataSetChanged()
+    }
+
+    fun updateUnreadCounts(newUnreadCounts: Map<String, Int>) {
+        unreadCounts = newUnreadCounts
         notifyDataSetChanged()
     }
 
@@ -33,7 +40,7 @@ class HomeAdapter(
 
     override fun onBindViewHolder(holder: HomeViewHolder, position: Int) {
         val chat = chats[position]
-        holder.bind(chat)
+        holder.bind(chat, unreadCounts[chat.chatId] ?: 0)
     }
 
     override fun getItemCount(): Int = chats.size
@@ -48,8 +55,9 @@ class HomeAdapter(
         private val lastMessageTextView: TextView = itemView.findViewById(R.id.lastMessageTextView)
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
+        val chatBadge: TextView = itemView.findViewById(R.id.chatBadge)
 
-        fun bind(chat: Chat) {
+        fun bind(chat: Chat, unreadCount: Int) {
             val firestore = FirebaseFirestore.getInstance()
             val chatRepo = HomeRepository(firestore)
 
@@ -79,6 +87,13 @@ class HomeAdapter(
                 timeFormat.format(lastUpdatedDate)
             } else {
                 dateFormat.format(lastUpdatedDate)
+            }
+
+            if (unreadCount > 0) {
+                chatBadge.visibility = View.VISIBLE
+                chatBadge.text = unreadCount.toString()
+            } else {
+                chatBadge.visibility = View.GONE
             }
 
             if (chat.status == "closed") {

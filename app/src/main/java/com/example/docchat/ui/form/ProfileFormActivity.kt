@@ -13,6 +13,7 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.TextView
 import android.widget.Toast
@@ -25,6 +26,7 @@ import com.example.docchat.ui.login.LoginActivity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
 
 class ProfileFormActivity : AppCompatActivity() {
@@ -52,26 +54,53 @@ class ProfileFormActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_profile_form)
 
+        initializeUI()
+        initializeHelpers()
+        setupLocationHandling()
+
+        val isEditMode = intent.getBooleanExtra("edit_mode", false)
+        if (isEditMode) {
+            loadUserProfile()
+        }
+    }
+
+    private fun loadUserProfile() {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        db.collection("users").document(currentUser.email!!)
+            .get()
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    findViewById<EditText>(R.id.nameEditText).setText(document.getString("name") ?: "")
+                    findViewById<EditText>(R.id.phoneNumberEditText).setText(document.getString("phone") ?: "")
+                    findViewById<TextView>(R.id.selectedDateTextView).text = document.getString("birthday") ?: "Pilih Tanggal Lahir"
+                    findViewById<EditText>(R.id.locationSearchField).setText(document.getString("location") ?: "")
+
+                    val gender = document.getString("gender") ?: ""
+                    when (gender) {
+                        "Male" -> findViewById<RadioButton>(R.id.rbMale).isChecked = true
+                        "Female" -> findViewById<RadioButton>(R.id.rbFemale).isChecked = true
+                    }
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Gagal memuat profil", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+    private fun initializeUI() {
+        setupProgressDialog()
+        setupToolbar()
+        setupListeners()
+        setupLocationField()
+
         // Dismiss keyboard when tapping outside EditText
         findViewById<View>(R.id.main).setOnTouchListener { _, _ ->
             dismissKeyboard()
             false
         }
-
-        setupProgressDialog()
-        setupLocationField()
-        initializeHelpers()
-        setupToolbar()
-        setupListeners()
-        checkGpsAndRequestPermission()
-
-    }
-
-    private fun setupProgressDialog() {
-        progressDialog = AlertDialog.Builder(this)
-            .setView(R.layout.dialog_progress)
-            .setCancelable(false)
-            .create()
     }
 
     private fun initializeHelpers() {
@@ -81,12 +110,19 @@ class ProfileFormActivity : AppCompatActivity() {
         firebaseHelper = FirebaseHelper(this, auth)
     }
 
+    private fun setupProgressDialog() {
+        progressDialog = AlertDialog.Builder(this)
+            .setView(R.layout.dialog_progress)
+            .setCancelable(false)
+            .create()
+    }
+
     private fun setupToolbar() {
         setSupportActionBar(findViewById(R.id.mainToolbar))
         supportActionBar?.apply {
             title = "Profile Form"
             setDisplayHomeAsUpEnabled(true)
-            supportActionBar?.setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24) // Use a white arrow icon
+            setHomeAsUpIndicator(R.drawable.baseline_arrow_back_24) // White arrow icon
         }
     }
 
@@ -100,7 +136,6 @@ class ProfileFormActivity : AppCompatActivity() {
         findViewById<Button>(R.id.saveButton).setOnClickListener {
             saveUserProfile()
         }
-
     }
 
     private fun setupLocationField() {
@@ -113,9 +148,12 @@ class ProfileFormActivity : AppCompatActivity() {
         }
     }
 
-    private fun checkGpsAndRequestPermission() {
-        if (!locationHelper.isGpsEnabled()) locationHelper.promptEnableGps()
-        else fetchCurrentLocation()
+    private fun setupLocationHandling() {
+        if (!locationHelper.isGpsEnabled()) {
+            locationHelper.promptEnableGps()
+        } else {
+            fetchCurrentLocation()
+        }
     }
 
     private fun requestLocationFromGps() {
@@ -127,9 +165,8 @@ class ProfileFormActivity : AppCompatActivity() {
     private fun fetchCurrentLocation() {
         lifecycleScope.launch {
             locationHelper.fetchCurrentLocation { location ->
-                // Update UI on the main thread
                 runOnUiThread {
-                    findViewById<EditText>(R.id.locationSearchField).setText(location)
+                    locationSearchField.setText(location)
                 }
             }
         }
@@ -152,17 +189,17 @@ class ProfileFormActivity : AppCompatActivity() {
 
         progressDialog.show()
         firebaseHelper.saveUserProfileToFirestore(currentEmail, name, gender, phone, birthday, location, true) {
-            firebaseHelper.startPhoneVerification(phone, this, object : FirebaseHelper.PhoneVerificationCallback {
-                override fun onVerificationComplete() {
-                    progressDialog.dismiss()
-                    showToast("Profile saved and phone verified successfully")
-                }
-
-                override fun onVerificationFailed(error: String) {
-                    progressDialog.dismiss()
-                    showToast("Verification failed: $error")
-                }
-            })
+//            firebaseHelper.startPhoneVerification(phone, this, object : FirebaseHelper.PhoneVerificationCallback {
+//                override fun onVerificationComplete() {
+//                    progressDialog.dismiss()
+//                    showToast("Profile saved and phone verified successfully")
+//                }
+//
+//                override fun onVerificationFailed(error: String) {
+//                    progressDialog.dismiss()
+//                    showToast("Verification failed: $error")
+//                }
+//            })
         }
     }
 
@@ -170,7 +207,7 @@ class ProfileFormActivity : AppCompatActivity() {
         val phonePattern = "^(\\+62|0)\\d{8,12}$".toRegex()
 
         return when {
-            name.isEmpty() || phone.isEmpty() || gender == "Not specified" || birthday.isEmpty() || birthday == "Pilih Tanggal Lahir"|| location.isEmpty() || location == "Location not available" || location == "Unable to fetch address" -> {
+            name.isEmpty() || phone.isEmpty() || gender == "Not specified" || birthday.isEmpty() || birthday == "Pilih Tanggal Lahir"|| location.isEmpty() || location == "Gagal memindai lokasi" || location == "Unable to fetch address" -> {
                 showToast("Please fill all fields.")
                 false
             }

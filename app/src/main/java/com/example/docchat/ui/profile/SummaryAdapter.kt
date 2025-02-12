@@ -37,6 +37,7 @@ class SummaryAdapter(
         holder.doctorTextView.text = "Dokter: ${summary.doctorName}"
         holder.diseaseTextView.text = "Penyakit: ${summary.disease}"
         holder.medicineTextView.text = "Resep Obat: ${summary.medicine}"
+        holder.medicineTextView.visibility = if (globalRole == "user") View.GONE else View.VISIBLE
         holder.editButton.visibility = if (globalRole == "doctor" || globalRole == "admin") View.VISIBLE else View.GONE
         holder.editButton.setOnClickListener { onEditClick(summary) }
     }

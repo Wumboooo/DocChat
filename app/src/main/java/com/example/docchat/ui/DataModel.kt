@@ -1,21 +1,28 @@
 package com.example.docchat.ui
 
+import com.google.firebase.firestore.IgnoreExtraProperties
+
+@IgnoreExtraProperties
 data class Messages(
     val senderEmail: String = "",
     val imageUrl: String? = null,
     val text: String = "",
-    val timestamp: Long = 0
+    val timestamp: Long = 0,
+    val status: String = "",
+    val isRead: Boolean = false
 )
+
 
 data class Chat(
     var chatId: String = "",
     var participants: List<String> = emptyList(),
     var lastMessage: String = "",
     var lastUpdated: Long = 0L,
-    var status: String = "active", // Status: active, closed
-    var summary: Map<String, Any>? = null,   // Summary dari dokter
-    var participantName: String? = null, // Nama peserta chat
-    var archivedBy: List<String> = emptyList()
+    var status: String = "active",
+    var summary: Map<String, Any>? = null,
+    var participantName: String = "",
+    var archivedBy: List<String> = emptyList(),
+    var lastSenderEmail: String = ""
 )
 
 data class ChatSummary(
@@ -40,3 +47,13 @@ data class Doctor(
     val fee: Int = 0,
     val specialization: String = ""
 )
+
+data class UserProfile(
+    val name: String = "",
+    val profileImage: String = "",
+    val phone: String = "",
+    val gender: String = "",
+    val birthday: String = "",
+    val location: String = ""
+)
+

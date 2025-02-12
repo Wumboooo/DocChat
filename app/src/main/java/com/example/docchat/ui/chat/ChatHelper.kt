@@ -12,6 +12,7 @@ import com.example.docchat.ui.Utils
 import com.google.firebase.firestore.DocumentSnapshot
 
 object ChatHelper {
+
     fun showDoctorSelectionDialog(
         context: Context,
         doctorList: List<DocumentSnapshot>,

@@ -65,7 +65,7 @@ class LocationHelper(
                     ?.get(0)
                     ?.getAddressLine(0) ?: "Unable to fetch address"
             } else {
-                "Location not available"
+                "Gagal memindai lokasi"
             }
             callback(address)
         }

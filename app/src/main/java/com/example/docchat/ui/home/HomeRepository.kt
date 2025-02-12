@@ -2,10 +2,41 @@ package com.example.docchat.ui.home
 
 import android.util.Log
 import com.example.docchat.ui.Chat
+import com.google.android.gms.tasks.Task
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.QuerySnapshot
+import java.util.concurrent.atomic.AtomicInteger
 
 class HomeRepository(private val firestore: FirebaseFirestore) {
+
+    fun getUnreadMessagesCount(userEmail: String, callback: (Int) -> Unit) {
+        firestore.collection("chats")
+            .whereArrayContains("participants", userEmail)
+            .get()
+            .addOnSuccessListener { chats ->
+                val unreadCount = AtomicInteger(0)
+                val tasks = mutableListOf<Task<QuerySnapshot>>()
+
+                for (chat in chats.documents) {
+                    val task = firestore.collection("chats")
+                        .document(chat.id)
+                        .collection("messages")
+                        .whereEqualTo("isRead", false)
+                        .whereNotEqualTo("senderEmail", userEmail)
+                        .get()
+                        .addOnSuccessListener { messages ->
+                            unreadCount.addAndGet(messages.size())
+                        }
+                    tasks.add(task)
+                }
+
+                Tasks.whenAllComplete(tasks).addOnCompleteListener {
+                    callback(unreadCount.get())
+                }
+            }
+    }
 
     fun fetchChats(currentEmail: String, onComplete: (List<Chat>) -> Unit) {
         firestore.collection("chats")
@@ -95,5 +126,7 @@ class HomeRepository(private val firestore: FirebaseFirestore) {
                 callback(email, "")
             }
     }
+
+
 
 }

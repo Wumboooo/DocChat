@@ -13,9 +13,12 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
 import com.example.docchat.R
+import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.databinding.ActivityMainBinding
 import com.example.docchat.ui.adminlist.AdminDoctorListActivity
+import com.example.docchat.ui.form.ProfileFormActivity
 import com.example.docchat.ui.login.LoginActivity
+import com.example.docchat.ui.profile.ProfileRepository
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -25,7 +28,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private var isMasterAdmin: Boolean = false // Variabel untuk menyimpan status admin master
+    private var isMasterAdmin: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +48,14 @@ class MainActivity : AppCompatActivity() {
         navView.setupWithNavController(navController)
         navView.itemIconTintList = null
 
+        val chatId = intent.getStringExtra("chatId")
+        if (chatId != null) {
+            val bundle = Bundle()
+            bundle.putString("chatId", chatId)
+
+            navController.navigate(R.id.navigation_home, bundle)
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -52,13 +63,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        val profileRepository = ProfileRepository()
+        profileRepository.saveProfileImageToFirestore()
         checkAdminTier()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)
         val listAdminAndDoctor = menu?.findItem(R.id.list_admin_and_doctor)
+        val editProfile = menu?.findItem(R.id.action_edit_profile)
         listAdminAndDoctor?.isVisible = isMasterAdmin
+        editProfile?.isVisible = globalRole == "user"
+
         return true
     }
 
@@ -71,6 +87,12 @@ class MainActivity : AppCompatActivity() {
             R.id.list_admin_and_doctor -> {
                 val intent = Intent(this, AdminDoctorListActivity::class.java)
                 startActivity(intent)
+                true
+            }
+            R.id.action_edit_profile -> {
+                startActivity(Intent(this, ProfileFormActivity::class.java).apply {
+                    putExtra("edit_mode", true)
+                })
                 true
             }
             else -> super.onOptionsItemSelected(item)

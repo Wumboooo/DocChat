@@ -9,11 +9,15 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.docchat.R
 import com.example.docchat.SplashScreenActivity.Companion.globalRole
 import com.example.docchat.ui.ChatSummary
@@ -23,12 +27,17 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 
 class ProfileFragment : Fragment() {
+
     private lateinit var firestore: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private lateinit var recyclerView: RecyclerView
     private lateinit var summaryAdapter: SummaryAdapter
+    private lateinit var profileViewModel: ProfileViewModel
+    private lateinit var nameTextView: TextView
+    private lateinit var emailTextView: TextView
+    private lateinit var phoneTextView: TextView
+    private lateinit var profileImageView: ImageView
     private val summaryList = mutableListOf<ChatSummary>()
-
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -36,27 +45,44 @@ class ProfileFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_profile, container, false)
 
-        firestore = FirebaseFirestore.getInstance()
-        auth = FirebaseAuth.getInstance()
-        recyclerView = view.findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = LinearLayoutManager(context)
+        profileViewModel = ViewModelProvider(this)[ProfileViewModel::class.java]
 
-        summaryAdapter = SummaryAdapter(summaryList) { summary ->
-            handleSummaryClick(summary)
-        }
-
-        recyclerView.adapter = summaryAdapter
-
-
+        initViews(view)
+        setupRecyclerView(view)
+        setupProfileObserver()
         loadSummaries()
 
-        // Set up touch listener to dismiss keyboard
-        view.setOnTouchListener { _, _ ->
-            dismissKeyboard()
-            false
-        }
+        profileViewModel.fetchUserProfile()
 
         return view
+    }
+
+    private fun initViews(view: View) {
+        firestore = FirebaseFirestore.getInstance()
+        auth = FirebaseAuth.getInstance()
+        nameTextView = view.findViewById(R.id.nameTextView)
+        emailTextView = view.findViewById(R.id.emailTextView)
+        phoneTextView = view.findViewById(R.id.phoneNumberTextView)
+        profileImageView = view.findViewById(R.id.profileImage)
+        view.setOnTouchListener { _, _ -> dismissKeyboard(); false }
+    }
+
+    private fun setupRecyclerView(view: View) {
+        recyclerView = view.findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(context)
+        summaryAdapter = SummaryAdapter(summaryList) { handleSummaryClick(it) }
+        recyclerView.adapter = summaryAdapter
+    }
+
+    private fun setupProfileObserver() {
+        profileViewModel.profileData.observe(viewLifecycleOwner) { profile ->
+            nameTextView.text = profile?.name ?: ""
+            emailTextView.text = auth.currentUser?.email ?: ""
+            phoneTextView.text = profile?.phone ?: ""
+            phoneTextView.visibility = if ((profile?.phone ?: "") == "") View.GONE else View.VISIBLE
+            Log.d("ProfileFragment", "Profile Image URL: ${profile?.profileImage ?: ""}")
+            Glide.with(this).load(profile?.profileImage ?: "").into(profileImageView)
+        }
     }
 
     private fun loadSummaries() {

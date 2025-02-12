@@ -7,6 +7,12 @@
         android:title="List of Admins and Doctors"
         android:icon="@drawable/baseline_format_list_bulleted_24"
         app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_edit_profile"
+        android:title="Edit Profile"
+        app:showAsAction="never" />
+
     <item
         android:id="@+id/action_sign_out"
         android:title="Sign Out"

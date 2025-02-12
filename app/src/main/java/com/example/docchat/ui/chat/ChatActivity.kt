@@ -13,6 +13,7 @@ import android.view.MenuItem
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -37,6 +38,8 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var messageEditText: EditText
     private lateinit var sendButton: Button
     private lateinit var chatViewModel: ChatViewModel
+    private lateinit var chatPartnerName: TextView
+    private lateinit var chatStatus: TextView
 
     private val messages = mutableListOf<Messages>()
     private var chatId: String? = null
@@ -52,6 +55,7 @@ class ChatActivity : AppCompatActivity() {
 
         val toolbar = findViewById<Toolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
 
         firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
@@ -61,6 +65,8 @@ class ChatActivity : AppCompatActivity() {
         messageEditText = findViewById(R.id.messageEditText)
         imageButtonUpload = findViewById(R.id.imageButtonUpload)
         sendButton = findViewById(R.id.sendButton)
+        chatPartnerName = findViewById(R.id.chatPartnerName)
+        chatStatus = findViewById(R.id.chatStatus)
 
         val chatRepository = ChatRepository(firestore)
         val factory = ChatViewModelFactory(chatRepository)
@@ -69,10 +75,12 @@ class ChatActivity : AppCompatActivity() {
         chatId = intent.getStringExtra("chatId")
         if (chatId == null) {
             Log.e("ChatActivity", "Received invalid chat ID")
-            Toast.makeText(this, "Chat ID is missing.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Chat ID tidak ditemukan.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Chat ID tidak ditemukan.", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
+        Log.d("ChatActivity", "Chat dibuka dengan ID: $chatId")
 
         val currentUserEmail = auth.currentUser?.email ?: ""
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -93,21 +101,22 @@ class ChatActivity : AppCompatActivity() {
         }
 
         chatViewModel.loadMessages(chatId!!)
+        chatViewModel.markMessagesAsRead(chatId!!)
 
-        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
-            val user = FirebaseAuth.getInstance().currentUser
-            user?.let {
-                FirebaseFirestore.getInstance().collection("users")
-                    .document(user.email!!)
-                    .update("fcmToken", token)
-                    .addOnSuccessListener {
-                        Log.d("Firebase", "FCM Token saved successfully")
-                    }
-                    .addOnFailureListener {
-                        Log.e("Firebase", "Failed to save FCM Token", it)
-                    }
-            }
+        updateFCMToken()
+
+        val partnerName = intent.getStringExtra("partnerName")
+        val status = intent.getStringExtra("status")
+
+        if (partnerName != null && status != null) {
+            chatPartnerName.text = partnerName
+            chatStatus.text = status
+        } else {
+            Toast.makeText(this, "Nama atau status tidak ditemukan.", Toast.LENGTH_SHORT).show()
+            finish()
         }
+
+        monitorChatStatus()
 
         imageButtonUpload.setOnClickListener {
             showImagePickerDialog()
@@ -118,6 +127,11 @@ class ChatActivity : AppCompatActivity() {
             chatViewModel.sendMessage(chatId!!, auth, text, this)
             messageEditText.text.clear()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        chatViewModel.markMessagesAsRead(chatId!!)
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -159,6 +173,45 @@ class ChatActivity : AppCompatActivity() {
                 uploadImage(imageUri)
             }
         }
+    }
+
+    private fun updateFCMToken() {
+        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+            val user = FirebaseAuth.getInstance().currentUser
+            user?.let {
+                FirebaseFirestore.getInstance().collection("users")
+                    .document(user.email!!)
+                    .get()
+                    .addOnSuccessListener { document ->
+                        if (document.exists()) {
+                            saveFCMToken("users", user.email!!, token)
+                        } else {
+                            FirebaseFirestore.getInstance().collection("doctors")
+                                .document(user.email!!)
+                                .get()
+                                .addOnSuccessListener { doc ->
+                                    if (doc.exists()) {
+                                        saveFCMToken("doctors", user.email!!, token)
+                                    } else {
+                                        saveFCMToken("admins", user.email!!, token)
+                                    }
+                                }
+                        }
+                    }
+            }
+        }
+    }
+
+    private fun saveFCMToken(path: String, email: String, token: String) {
+        FirebaseFirestore.getInstance().collection(path)
+            .document(email)
+            .update("fcmToken", token)
+            .addOnSuccessListener {
+                Log.d("Firebase", "FCM Token saved for $email")
+            }
+            .addOnFailureListener {
+                Log.e("Firebase", "Failed to save FCM Token", it)
+            }
     }
 
     private fun forwardMessage() {
@@ -228,6 +281,21 @@ class ChatActivity : AppCompatActivity() {
     private fun openGallery() {
         val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
         startActivityForResult(intent, PICK_IMAGE_REQUEST)
+    }
+
+    private fun monitorChatStatus() {
+        firestore.collection("chats").document(chatId!!)
+            .addSnapshotListener { documentSnapshot, error ->
+                if (error != null) {
+                    Log.e("ChatActivity", "Gagal memantau status chat", error)
+                    return@addSnapshotListener
+                }
+
+                if (documentSnapshot != null && documentSnapshot.exists()) {
+                    val status = documentSnapshot.getString("status") ?: "error"
+                    chatStatus.text = status
+                }
+            }
     }
 
     private fun createNewChatWithDoctor(doctorEmail: String) {

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+
+    <solid android:color="@color/white" /> <!-- Warna latar belakang -->
+    <size android:width="24dp" android:height="24dp"/> <!-- Ukuran badge -->
+    <corners android:radius="12dp"/> <!-- Membuat bentuk bulat -->
+</shape>
