@@ -54,6 +54,8 @@ data class UserProfile(
     val phone: String = "",
     val gender: String = "",
     val birthday: String = "",
-    val location: String = ""
+    val location: String = "",
+    val tier: String = "",
+    val fcmToken: String = ""
 )
 

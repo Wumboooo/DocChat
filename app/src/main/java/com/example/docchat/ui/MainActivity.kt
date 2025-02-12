@@ -48,14 +48,6 @@ class MainActivity : AppCompatActivity() {
         navView.setupWithNavController(navController)
         navView.itemIconTintList = null
 
-        val chatId = intent.getStringExtra("chatId")
-        if (chatId != null) {
-            val bundle = Bundle()
-            bundle.putString("chatId", chatId)
-
-            navController.navigate(R.id.navigation_home, bundle)
-        }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
                 != PackageManager.PERMISSION_GRANTED) {

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.docchat.R
+import com.example.docchat.ui.chat.ChatActivity
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
@@ -24,9 +25,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
 
     private fun sendNotification(title: String, messageBody: String, chatId: String) {
-        val intent = Intent(this, MainActivity::class.java).apply {
+        val intent = Intent(this, ChatActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
             putExtra("chatId", chatId)
+            putExtra("partnerName", title)
         }
 
         val pendingIntent = PendingIntent.getActivity(

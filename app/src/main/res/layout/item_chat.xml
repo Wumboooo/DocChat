@@ -57,7 +57,6 @@
             android:gravity="center"
             android:text="9"
             android:layout_margin="8dp"
-            android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="@+id/timestampTextView"
             app:layout_constraintEnd_toStartOf="@id/deleteButton"
             app:layout_constraintTop_toTopOf="@+id/timestampTextView" />

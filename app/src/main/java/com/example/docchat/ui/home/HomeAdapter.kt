@@ -1,5 +1,6 @@
 package com.example.docchat.ui.home
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,8 +30,10 @@ class HomeAdapter(
 
     fun updateUnreadCounts(newUnreadCounts: Map<String, Int>) {
         unreadCounts = newUnreadCounts
+        Log.d("UnreadMessages", "Updating unread counts in adapter: $unreadCounts")
         notifyDataSetChanged()
     }
+
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HomeViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -55,9 +58,12 @@ class HomeAdapter(
         private val lastMessageTextView: TextView = itemView.findViewById(R.id.lastMessageTextView)
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
         private val deleteButton: ImageView = itemView.findViewById(R.id.deleteButton)
-        val chatBadge: TextView = itemView.findViewById(R.id.chatBadge)
+        private val chatBadge: TextView = itemView.findViewById(R.id.chatBadge)
 
         fun bind(chat: Chat, unreadCount: Int) {
+
+            Log.d("UnreadMessages", "Binding chatId: ${chat.chatId}, UnreadCount: $unreadCount")
+
             val firestore = FirebaseFirestore.getInstance()
             val chatRepo = HomeRepository(firestore)
 

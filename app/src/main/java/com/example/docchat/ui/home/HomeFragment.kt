@@ -6,7 +6,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -36,10 +35,6 @@ class HomeFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_home, container, false)
 
-        arguments?.getString("chatId")?.let { chatId ->
-            openChat(chatId, "Unknown", "active")
-        }
-
         auth = FirebaseAuth.getInstance()
         val repository = HomeRepository(firestore)
 
@@ -58,15 +53,13 @@ class HomeFragment : Fragment() {
 
         viewModel.chats.observe(viewLifecycleOwner) { chats ->
             val currentEmail = auth.currentUser?.email ?: return@observe
-
-            val filteredChats = chats.filter { chat ->
-                !(chat.archivedBy.contains(currentEmail))
-            }
+            val filteredChats = chats.filter { chat -> !chat.archivedBy.contains(currentEmail) }
             chatAdapter.updateChats(filteredChats)
         }
 
-        viewModel.error.observe(viewLifecycleOwner) { errorMessage ->
-            Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+        viewModel.unreadMessagesCount.observe(viewLifecycleOwner) { unreadCounts ->
+            Log.d("UnreadMessages", "Updated unread counts: $unreadCounts")
+            chatAdapter.updateUnreadCounts(unreadCounts)
         }
 
         loadChats()
@@ -83,11 +76,6 @@ class HomeFragment : Fragment() {
             startChatWithAdmin()
         }
 
-        viewModel.unreadMessagesCount.observe(viewLifecycleOwner) { count ->
-            updateUnreadBadge(count)
-            chatAdapter.updateUnreadCounts(mapOf("global_unread" to count)) // Sesuaikan dengan ID chat jika perlu
-        }
-
         val userEmail = auth.currentUser?.email
         userEmail?.let {
             viewModel.listenForUnreadMessages(it)
@@ -95,14 +83,6 @@ class HomeFragment : Fragment() {
 
         return view
     }
-
-    private fun updateUnreadBadge(count: Int) {
-        Log.d("HomeFragment", "Updating badge with count: $count")
-        val badgeTextView = view?.findViewById<TextView>(R.id.chatBadge)
-        badgeTextView?.visibility = if (count > 0) View.VISIBLE else View.GONE
-        badgeTextView?.text = count.toString()
-    }
-
 
     private fun openChat(chatId: String, partnerName: String, status: String) {
         val intent = Intent(requireContext(), ChatActivity::class.java).apply {
@@ -129,7 +109,10 @@ class HomeFragment : Fragment() {
             .get()
             .addOnSuccessListener { chatQuery ->
                 if (!chatQuery.isEmpty) {
-                    openChat(chatQuery.documents.first().id)
+                    val chatDoc = chatQuery.documents.first()
+                    val partnerName = "Admin"
+                    val status = chatDoc.getString("status") ?: "active"
+                    openChat(chatDoc.id, partnerName, status)
                 } else {
                     assignAdminAndCreateChat(currentEmail)
                 }

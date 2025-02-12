@@ -7,33 +7,48 @@ import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
-import java.util.concurrent.atomic.AtomicInteger
 
 class HomeRepository(private val firestore: FirebaseFirestore) {
 
-    fun getUnreadMessagesCount(userEmail: String, callback: (Int) -> Unit) {
+    fun listenForUnreadMessages(userEmail: String, onUnreadMessagesUpdated: (Map<String, Int>) -> Unit) {
         firestore.collection("chats")
             .whereArrayContains("participants", userEmail)
-            .get()
-            .addOnSuccessListener { chats ->
-                val unreadCount = AtomicInteger(0)
+            .addSnapshotListener { chatSnapshot, chatError ->
+                if (chatError != null) {
+                    Log.e("Firestore", "Error fetching chats: ${chatError.message}")
+                    return@addSnapshotListener
+                }
+
+                val chatIds = chatSnapshot?.documents?.mapNotNull { it.id } ?: emptyList()
+                Log.d("Firestore", "User is in chats: $chatIds")
+
+                if (chatIds.isEmpty()) return@addSnapshotListener
+
+                val unreadCountMap = mutableMapOf<String, Int>()
                 val tasks = mutableListOf<Task<QuerySnapshot>>()
 
-                for (chat in chats.documents) {
+                for (chatId in chatIds) {
                     val task = firestore.collection("chats")
-                        .document(chat.id)
+                        .document(chatId)
                         .collection("messages")
-                        .whereEqualTo("isRead", false)
                         .whereNotEqualTo("senderEmail", userEmail)
+                        .whereEqualTo("isRead", false)
                         .get()
-                        .addOnSuccessListener { messages ->
-                            unreadCount.addAndGet(messages.size())
+                        .addOnSuccessListener { snapshot ->
+                            val unreadCount = snapshot.size()
+                            Log.d("Firestore", "ChatId: $chatId, UnreadCount: $unreadCount")
+                            unreadCountMap[chatId] = unreadCount
                         }
+                        .addOnFailureListener { error ->
+                            Log.e("Firestore", "Error fetching unread messages for chatId $chatId: ${error.message}")
+                        }
+
                     tasks.add(task)
                 }
 
                 Tasks.whenAllComplete(tasks).addOnCompleteListener {
-                    callback(unreadCount.get())
+                    Log.d("Firestore", "Unread messages count updated: $unreadCountMap")
+                    onUnreadMessagesUpdated(unreadCountMap)
                 }
             }
     }
@@ -126,7 +141,5 @@ class HomeRepository(private val firestore: FirebaseFirestore) {
                 callback(email, "")
             }
     }
-
-
 
 }

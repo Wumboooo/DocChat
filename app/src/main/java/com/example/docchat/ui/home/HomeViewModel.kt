@@ -3,8 +3,11 @@ package com.example.docchat.ui.home
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.docchat.ui.Chat
-import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 
 class HomeViewModel(private val repository: HomeRepository) : ViewModel() {
 
@@ -14,42 +17,38 @@ class HomeViewModel(private val repository: HomeRepository) : ViewModel() {
     private val _error = MutableLiveData<String>()
     val error: LiveData<String> get() = _error
 
-    private val _unreadMessagesCount = MutableLiveData<Int>()
-    val unreadMessagesCount: LiveData<Int> get() = _unreadMessagesCount
-
-    fun fetchUnreadMessagesCount(userEmail: String) {
-        repository.getUnreadMessagesCount(userEmail) { count ->
-            _unreadMessagesCount.postValue(count)
-        }
-    }
+    private val _unreadMessagesCount = MutableLiveData<Map<String, Int>>()
+    val unreadMessagesCount: LiveData<Map<String, Int>> get() = _unreadMessagesCount
 
     fun listenForUnreadMessages(userEmail: String) {
-        FirebaseFirestore.getInstance().collection("chats")
-            .whereArrayContains("participants", userEmail)
-            .addSnapshotListener { snapshots, _ ->
-                snapshots?.let {
-                    fetchUnreadMessagesCount(userEmail)
-                    repository.getUnreadMessagesCount(userEmail) { count ->
-                        _unreadMessagesCount.postValue(count)
-                    }
-                }
-            }
+        repository.listenForUnreadMessages(userEmail) { unreadCounts ->
+            _unreadMessagesCount.postValue(unreadCounts)
+        }
     }
 
     fun loadChats(currentEmail: String) {
         repository.fetchChats(currentEmail) { fetchedChats ->
-            val updatedChats = fetchedChats.toMutableList()
-
-            fetchedChats.forEachIndexed { index, chat ->
-                val otherEmail = chat.participants.firstOrNull { it != currentEmail }
-                if (otherEmail != null) {
-                    repository.fetchParticipantName(otherEmail) { name ->
-                        updatedChats[index] = chat.copy(participantName = name)
-                        _chats.postValue(updatedChats)
+            viewModelScope.launch {
+                val updatedChats = fetchedChats.map { chat ->
+                    val otherEmail = chat.participants.firstOrNull { it != currentEmail }
+                    if (otherEmail != null) {
+                        val name = fetchParticipantNameSuspend(otherEmail)
+                        chat.copy(participantName = name)
+                    } else {
+                        chat
                     }
                 }
+                _chats.postValue(updatedChats)
             }
         }
     }
+
+    private suspend fun fetchParticipantNameSuspend(email: String): String =
+        suspendCoroutine { cont ->
+            repository.fetchParticipantName(email) { name ->
+                cont.resume(name)
+            }
+        }
+
 }
 

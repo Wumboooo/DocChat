@@ -76,7 +76,6 @@ class ChatActivity : AppCompatActivity() {
         if (chatId == null) {
             Log.e("ChatActivity", "Received invalid chat ID")
             Toast.makeText(this, "Chat ID tidak ditemukan.", Toast.LENGTH_SHORT).show()
-            Toast.makeText(this, "Chat ID tidak ditemukan.", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
@@ -106,13 +105,10 @@ class ChatActivity : AppCompatActivity() {
         updateFCMToken()
 
         val partnerName = intent.getStringExtra("partnerName")
-        val status = intent.getStringExtra("status")
-
-        if (partnerName != null && status != null) {
+        if (partnerName != null) {
             chatPartnerName.text = partnerName
-            chatStatus.text = status
         } else {
-            Toast.makeText(this, "Nama atau status tidak ditemukan.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Nama tidak ditemukan.", Toast.LENGTH_SHORT).show()
             finish()
         }
 
