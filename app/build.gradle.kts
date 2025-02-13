@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -6,7 +9,6 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
 }
-
 android {
     namespace = "com.example.docchat"
     compileSdk = 35
@@ -19,8 +21,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-
     }
 
     buildTypes {
@@ -30,28 +30,40 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            buildConfigField("String", "GEO_API_KEY", "\"${properties["GEO_API_KEY"]}\"")
-            buildConfigField("String", "WEB_API_KEY", "\"${properties["WEB_API_KEY"]}\"")
-            buildConfigField("String", "oauth2key", "\"${properties["oauth2key"]}\"")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         viewBinding = true
         buildConfig = true
     }
+
     packaging {
         resources {
             excludes += "META-INF/DEPENDENCIES"
         }
     }
+
+    val localProperties = Properties()
+    val localFile = rootProject.file("local.properties")
+    if (localFile.exists()) {
+        localProperties.load(FileInputStream(localFile))
+    }
+
+    defaultConfig {
+        manifestPlaceholders["GEO_API_KEY"] = localProperties.getProperty("GEO_API_KEY")
+    }
 }
+
 
 dependencies {
 
