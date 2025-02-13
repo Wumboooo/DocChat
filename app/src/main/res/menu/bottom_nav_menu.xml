@@ -7,6 +7,11 @@
         android:title="" />
 
     <item
+        android:id="@+id/navigation_summary"
+        android:icon="@drawable/summary"
+        android:title="" />
+
+    <item
         android:id="@+id/navigation_profile"
         android:icon="@drawable/profile"
         android:title="" />

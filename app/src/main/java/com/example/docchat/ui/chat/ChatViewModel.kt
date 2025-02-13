@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.docchat.ui.Messages
 import com.google.auth.oauth2.GoogleCredentials
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -30,8 +31,12 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
     private val _messages = MutableLiveData<List<Messages>>()
     val messages: LiveData<List<Messages>> get() = _messages
 
-    private val sentNotifications = mutableMapOf<String, Long>()
     private var unreadCount = 0
+
+    private val sentNotifications = mutableMapOf<String, Long>()
+    private val firestore = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
+    private var chatRef: DocumentReference? = null
 
     fun loadMessages(chatId: String) {
         chatRepository.loadMessages(chatId) { newMessages ->
@@ -40,15 +45,47 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
         }
     }
 
-    fun sendMessage(chatId: String, auth: FirebaseAuth, text: String, context: Context) {
-        chatRepository.sendMessage(chatId, auth, text, context) {
+    fun sendMessage(chatId: String, text: String, context: Context) {
+        val senderEmail = auth.currentUser?.email ?: return
+
+        chatRepository.sendMessage(chatId, senderEmail, text, context) {
             checkAndSendNotification(chatId, text, context)
         }
     }
 
     fun markMessagesAsRead(chatId: String) {
-        chatRepository.markMessagesAsRead(chatId)
+        val currentUserEmail = auth.currentUser?.email ?: return
+        chatRepository.markMessagesAsRead(chatId, currentUserEmail)
         sentNotifications.remove(chatId)
+    }
+
+    fun setUserActiveInChat(chatId: String, isActive: Boolean) {
+        val currentUserEmail = auth.currentUser?.email ?: return
+        chatRef = firestore.collection("chats").document(chatId)
+
+        firestore.runTransaction { transaction ->
+            val chatSnapshot = transaction.get(chatRef!!)
+            val activeParticipants = chatSnapshot.get("activeParticipants") as? MutableMap<String, Boolean> ?: mutableMapOf()
+
+            if (isActive) {
+                activeParticipants[currentUserEmail] = true
+            } else {
+                activeParticipants.remove(currentUserEmail)
+            }
+
+            transaction.update(chatRef!!, "activeParticipants", activeParticipants)
+        }
+    }
+
+    fun monitorActiveParticipants(chatId: String, onUpdate: (Map<String, Boolean>) -> Unit) {
+        chatRef = firestore.collection("chats").document(chatId)
+
+        chatRef!!.addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && snapshot.exists()) {
+                val activeParticipants = snapshot.get("activeParticipants") as? Map<String, Boolean> ?: emptyMap()
+                onUpdate(activeParticipants)
+            }
+        }
     }
 
     private fun checkAndSendNotification(chatId: String, message: String, context: Context) {
@@ -58,15 +95,16 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
             .document(chatId)
             .get()
             .addOnSuccessListener { chatDoc ->
-                val participants = chatDoc.get("participants") as? List<String> ?: return@addOnSuccessListener
-                val lastSenderEmail = chatDoc.getString("lastSenderEmail")?.lowercase() ?: currentUserEmail
+                val activeParticipants = chatDoc.get("activeParticipants") as? Map<String, Boolean> ?: emptyMap()
+                val participants = chatDoc.get("participants") as? List<String> ?: emptyList() // Ambil semua peserta chat
 
-                getUserName(lastSenderEmail) { senderName ->
-                    for (participant in participants) {
-                        if (participant.lowercase() != currentUserEmail) {
+                getUserName(currentUserEmail) { senderName ->
+                    for (participant in participants) { // Loop semua peserta chat
+                        if (participant.lowercase() != currentUserEmail.lowercase() &&
+                            (activeParticipants[participant] == null || activeParticipants[participant] == false) // Kirim hanya jika tidak aktif
+                        ) {
                             getUserFCMToken(participant) { fcmToken ->
                                 if (fcmToken != null) {
-                                    Log.d("FCM", "FCM Token: $fcmToken")
                                     val currentTime = System.currentTimeMillis()
 
                                     if (!sentNotifications.containsKey(chatId) || currentTime - sentNotifications[chatId]!! > 3000) {
@@ -83,7 +121,9 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
                     }
                 }
             }
+
     }
+
 
     private fun getUserFCMToken(email: String, callback: (String?) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
@@ -156,6 +196,10 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
             val jsonObject = JSONObject().apply {
                 put("message", JSONObject().apply {
                     put("token", fcmToken)
+                    put("notification", JSONObject().apply {
+                        put("title", senderName)
+                        put("body", message)
+                    })
                     put("data", JSONObject().apply {
                         put("title", senderName)
                         put("body", message)
@@ -190,10 +234,10 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
                                 Log.w("FCM", "FCM token tidak ditemukan. Menghapus token lama dan memperbarui.")
                                 deleteFCMTokenAndRegenerate(recipientEmail, context, senderName, message, chatId)
                             } else {
-                                Log.d("FCM", "Notification sent successfully: $responseBody")
+                                Log.d("FCM", "Notification sent successfully for $fcmToken: $responseBody")
                             }
                         } else {
-                            Log.d("FCM", "Notification sent successfully: $responseBody")
+                            Log.d("FCM", "Notification sent successfully for $fcmToken: $responseBody")
                         }
                     }
                 }

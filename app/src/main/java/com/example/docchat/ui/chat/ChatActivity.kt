@@ -2,6 +2,8 @@ package com.example.docchat.ui.chat
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
@@ -99,8 +101,15 @@ class ChatActivity : AppCompatActivity() {
             recyclerView.scrollToPosition(messages.size - 1)
         }
 
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(chatId.hashCode())
+
         chatViewModel.loadMessages(chatId!!)
-        chatViewModel.markMessagesAsRead(chatId!!)
+        recyclerView.viewTreeObserver.addOnGlobalLayoutListener {
+            if (messages.isNotEmpty()) {
+                chatViewModel.markMessagesAsRead(chatId!!)
+            }
+        }
 
         updateFCMToken()
 
@@ -120,14 +129,27 @@ class ChatActivity : AppCompatActivity() {
 
         sendButton.setOnClickListener {
             val text = messageEditText.text.toString()
-            chatViewModel.sendMessage(chatId!!, auth, text, this)
+            chatViewModel.sendMessage(chatId!!, text, this)
             messageEditText.text.clear()
         }
+
+        observeActiveUsers()
     }
 
     override fun onResume() {
         super.onResume()
-        chatViewModel.markMessagesAsRead(chatId!!)
+        chatViewModel.setUserActiveInChat(chatId!!, true)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        chatViewModel.setUserActiveInChat(chatId!!, false)
+    }
+
+    private fun observeActiveUsers() {
+        chatViewModel.monitorActiveParticipants(chatId!!) { activeParticipants ->
+            Log.d("ChatActivity", "Active users: $activeParticipants")
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -379,7 +401,7 @@ class ChatActivity : AppCompatActivity() {
 
     private fun endSession() {
         AlertDialog.Builder(this)
-            .setTitle("Konfirmasi Hapus")
+            .setTitle("Konfirmasi Close")
             .setMessage("Apakah Anda yakin ingin menghapus menutup obrolan?")
             .setPositiveButton("Hapus") { _, _ ->
                 firestore.collection("chats").document(chatId!!)

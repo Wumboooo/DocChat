@@ -1,12 +1,15 @@
 package com.example.docchat.ui
 
 import android.Manifest
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -24,6 +27,7 @@ import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : AppCompatActivity() {
 
@@ -117,11 +121,28 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun signOut() {
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancelAll()
+
         FirebaseAuth.getInstance().signOut()
         GoogleSignIn.getClient(this, GoogleSignInOptions.DEFAULT_SIGN_IN).signOut()
         val intent = Intent(this, LoginActivity::class.java)
+        FirebaseMessaging.getInstance().deleteToken()
         startActivity(intent)
         finish()
     }
-}
 
+    override fun onBackPressed() {
+        super.onBackPressed()
+        AlertDialog.Builder(this)
+            .setTitle("Exit App?")
+            .setMessage("Are you sure you want to exit the application?")
+            .setPositiveButton("Yes") { _, _ ->
+                finish()
+            }
+            .setNegativeButton("No") { dialog, _ ->
+                dialog.dismiss()
+            }
+            .show()
+    }
+}

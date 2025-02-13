@@ -110,9 +110,16 @@ class HomeFragment : Fragment() {
             .addOnSuccessListener { chatQuery ->
                 if (!chatQuery.isEmpty) {
                     val chatDoc = chatQuery.documents.first()
-                    val partnerName = "Admin"
-                    val status = chatDoc.getString("status") ?: "active"
-                    openChat(chatDoc.id, partnerName, status)
+                    val participants = chatDoc.get("participants") as List<String>
+                    val partnerEmail = participants.firstOrNull { it != currentEmail }
+
+                    if (partnerEmail != null) {
+                        val homeRepo = HomeRepository(firestore)
+                        homeRepo.fetchParticipantName(partnerEmail) { partnerName ->
+                            val status = chatDoc.getString("status") ?: "active"
+                            openChat(chatDoc.id, partnerName, status)
+                        }
+                    }
                 } else {
                     assignAdminAndCreateChat(currentEmail)
                 }
@@ -161,21 +168,27 @@ class HomeFragment : Fragment() {
     }
 
     private fun createNewChat(currentEmail: String, adminEmail: String) {
-        val participants = listOf(currentEmail, adminEmail)
+        firestore.collection("admins").document(adminEmail)
+            .get()
+            .addOnSuccessListener { adminDoc ->
+                val adminName = adminDoc.getString("name") ?: "Admin"
 
-        val newChat = mapOf(
-            "participants" to participants,
-            "lastMessage" to "Start of chat",
-            "lastUpdated" to System.currentTimeMillis(),
-            "status" to "active"
-        )
+                val participants = listOf(currentEmail, adminEmail)
+                val newChat = mapOf(
+                    "participants" to participants,
+                    "lastMessage" to "Start of chat",
+                    "lastUpdated" to System.currentTimeMillis(),
+                    "status" to "active"
+                )
 
-        firestore.collection("chats")
-            .add(newChat)
-            .addOnSuccessListener { docRef ->
-                openChat(docRef.id)
+                firestore.collection("chats")
+                    .add(newChat)
+                    .addOnSuccessListener { docRef ->
+                        openChat(docRef.id, adminName)
+                    }
             }
     }
+
 
     private fun deleteChat(chat: Chat) {
         val currentUser = auth.currentUser ?: return
@@ -192,9 +205,11 @@ class HomeFragment : Fragment() {
             }
     }
 
-    private fun openChat(chatId: String) {
+    private fun openChat(chatId: String, partnerName: String) {
         val intent = Intent(context, ChatActivity::class.java)
+
         intent.putExtra("chatId", chatId)
+        intent.putExtra("partnerName", partnerName)
         startActivity(intent)
     }
 }

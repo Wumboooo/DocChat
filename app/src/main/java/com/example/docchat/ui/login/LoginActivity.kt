@@ -55,6 +55,7 @@ class LoginActivity : AppCompatActivity() {
                         user?.email?.let { email ->
                             userRepository.checkUserRole(email) { role ->
                                 globalRole = role
+                                userRepository.getNewFCMToken()
                                 when (role) {
                                     "admin", "doctor" -> navigateTo(MainActivity::class.java)
                                     "user" -> userRepository.isProfileCompleted(email) { isCompleted ->
@@ -76,6 +77,7 @@ class LoginActivity : AppCompatActivity() {
             )
         }
     }
+
 
     private fun navigateTo(activity: Class<*>) {
         loadingBar.visibility = View.GONE

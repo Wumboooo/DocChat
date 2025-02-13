@@ -53,6 +53,7 @@
         <EditText
             android:id="@+id/messageEditText"
             android:layout_width="0dp"
+            android:layout_gravity="center_vertical"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Type your message" />
@@ -69,11 +70,16 @@
             android:visibility="gone"
             android:scaleType="fitCenter"/>
 
-        <Button
+        <ImageButton
             android:id="@+id/sendButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Kirim" />
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:background="@drawable/rounded_background_darker"
+            android:src="@drawable/ic_send"/>
+
+
     </LinearLayout>
 
 </LinearLayout>

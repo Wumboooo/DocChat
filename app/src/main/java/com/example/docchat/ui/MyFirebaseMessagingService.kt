@@ -1,9 +1,11 @@
 package com.example.docchat.ui
 
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.docchat.R
@@ -22,7 +24,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
         Log.d("MyFirebaseMessagingService", "Pesan FCM diterima: ${remoteMessage.data}")
     }
-
 
     private fun sendNotification(title: String, messageBody: String, chatId: String) {
         val intent = Intent(this, ChatActivity::class.java).apply {
@@ -44,8 +45,22 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setContentIntent(pendingIntent)
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(0, notificationBuilder.build())
+
+        notificationManager.notify(chatId.hashCode(), notificationBuilder.build())
     }
 
-
+    companion object {
+        fun createNotificationChannel(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val name = "Chat Notifications"
+                val descriptionText = "Notifikasi untuk pesan masuk"
+                val importance = NotificationManager.IMPORTANCE_HIGH
+                val channel = NotificationChannel("chat_channel", name, importance).apply {
+                    description = descriptionText
+                }
+                val notificationManager = context.getSystemService(NotificationManager::class.java)
+                notificationManager.createNotificationChannel(channel)
+            }
+        }
+    }
 }
