@@ -11,6 +11,11 @@
         tools:layout="@layout/fragment_home" />
 
     <fragment
+        android:id="@+id/navigation_summary"
+        android:name="com.example.docchat.ui.summary.SummaryFragment"
+        tools:layout="@layout/fragment_summary" />
+
+    <fragment
         android:id="@+id/navigation_profile"
         android:name="com.example.docchat.ui.profile.ProfileFragment"
         tools:layout="@layout/fragment_profile" />

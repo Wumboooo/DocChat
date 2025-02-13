@@ -71,21 +71,6 @@ class LocationHelper(
         }
     }
 
-
-    fun checkAndRequestGpsPermission(onGranted: () -> Unit) {
-        if (!isGpsEnabled()) {
-            promptEnableGps()
-        } else if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                activity,
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                ProfileFormActivity.GPS_PERMISSION_REQUEST_CODE
-            )
-        } else {
-            onGranted()
-        }
-    }
-
     // Open the map picker activity
     fun openMapPicker() {
         val intent = Intent(activity, MapPickerActivity::class.java)

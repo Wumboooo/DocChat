@@ -1,23 +1,19 @@
 package com.example.docchat.ui.chat
 
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.example.docchat.ui.Messages
 import com.example.docchat.R
+import com.example.docchat.ui.Messages
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class ChatAdapter(
     private val messages: List<Messages>,
-    private val currentUserEmail: String,
-    private val onImageClick: (String) -> Unit // Tambahkan callback klik gambar
+    private val currentUserEmail: String
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     companion object {
@@ -32,9 +28,9 @@ class ChatAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         return if (viewType == VIEW_TYPE_SENDER) {
-            SenderViewHolder(inflater.inflate(R.layout.item_message_sender, parent, false), onImageClick)
+            SenderViewHolder(inflater.inflate(R.layout.item_message_sender, parent, false))
         } else {
-            ReceiverViewHolder(inflater.inflate(R.layout.item_message_receiver, parent, false), onImageClick)
+            ReceiverViewHolder(inflater.inflate(R.layout.item_message_receiver, parent, false))
         }
     }
 
@@ -49,53 +45,33 @@ class ChatAdapter(
 
     override fun getItemCount(): Int = messages.size
 
-    class SenderViewHolder(itemView: View, private val onImageClick: (String) -> Unit) : RecyclerView.ViewHolder(itemView) {
+    class SenderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
-        private val imageView: ImageView = itemView.findViewById(R.id.messageImageView)
 
         fun bind(message: Messages) {
             timestampTextView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
 
             if (message.imageUrl != null) {
                 messageTextView.visibility = View.GONE
-                imageView.visibility = View.VISIBLE
-                Glide.with(itemView.context)
-                    .load(message.imageUrl)
-                    .into(imageView)
-
-                imageView.setOnClickListener {
-                    onImageClick(message.imageUrl) // Kirim URL ke ChatActivity untuk Zoom
-                }
             } else {
                 messageTextView.visibility = View.VISIBLE
-                imageView.visibility = View.GONE
                 messageTextView.text = message.text
             }
         }
     }
 
-    class ReceiverViewHolder(itemView: View, private val onImageClick: (String) -> Unit) : RecyclerView.ViewHolder(itemView) {
+    class ReceiverViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val messageTextView: TextView = itemView.findViewById(R.id.messageTextView)
         private val timestampTextView: TextView = itemView.findViewById(R.id.timestampTextView)
-        private val imageView: ImageView = itemView.findViewById(R.id.messageImageView)
 
         fun bind(message: Messages) {
             timestampTextView.text = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
 
             if (message.imageUrl != null) {
                 messageTextView.visibility = View.GONE
-                imageView.visibility = View.VISIBLE
-                Glide.with(itemView.context)
-                    .load(message.imageUrl)
-                    .into(imageView)
-
-                imageView.setOnClickListener {
-                    onImageClick(message.imageUrl)
-                }
             } else {
                 messageTextView.visibility = View.VISIBLE
-                imageView.visibility = View.GONE
                 messageTextView.text = message.text
             }
         }

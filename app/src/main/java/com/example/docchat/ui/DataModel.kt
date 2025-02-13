@@ -23,7 +23,8 @@ data class Chat(
     var participantName: String = "",
     var archivedBy: List<String> = emptyList(),
     var lastSenderEmail: String = "",
-    var activeUsers: Map<String, Boolean> = emptyMap()
+    var activeParticipants: Map<String, Boolean> = emptyMap(),
+    var timestamp: Long = 0L
 )
 
 data class ChatSummary(

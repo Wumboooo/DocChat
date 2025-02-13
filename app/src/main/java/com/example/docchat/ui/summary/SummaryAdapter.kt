@@ -1,4 +1,4 @@
-package com.example.docchat.ui.profile
+package com.example.docchat.ui.summary
 
 import android.view.LayoutInflater
 import android.view.View

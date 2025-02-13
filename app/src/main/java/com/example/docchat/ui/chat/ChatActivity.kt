@@ -1,18 +1,12 @@
 package com.example.docchat.ui.chat
 
-import android.app.Activity
 import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -28,9 +22,6 @@ import com.example.docchat.ui.Messages
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.storage.FirebaseStorage
-import com.google.firebase.storage.StorageReference
-import java.io.ByteArrayOutputStream
 
 class ChatActivity : AppCompatActivity() {
     private lateinit var firestore: FirebaseFirestore
@@ -38,18 +29,13 @@ class ChatActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var chatAdapter: ChatAdapter
     private lateinit var messageEditText: EditText
-    private lateinit var sendButton: Button
+    private lateinit var sendButton: ImageButton
     private lateinit var chatViewModel: ChatViewModel
     private lateinit var chatPartnerName: TextView
     private lateinit var chatStatus: TextView
 
     private val messages = mutableListOf<Messages>()
     private var chatId: String? = null
-
-    private lateinit var imageButtonUpload: ImageButton
-    private val PICK_IMAGE_REQUEST = 1
-    private val CAMERA_REQUEST = 2
-    private lateinit var storageReference: StorageReference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -62,10 +48,8 @@ class ChatActivity : AppCompatActivity() {
         firestore = FirebaseFirestore.getInstance()
         auth = FirebaseAuth.getInstance()
 
-        storageReference = FirebaseStorage.getInstance().reference
         recyclerView = findViewById(R.id.recyclerView)
         messageEditText = findViewById(R.id.messageEditText)
-        imageButtonUpload = findViewById(R.id.imageButtonUpload)
         sendButton = findViewById(R.id.sendButton)
         chatPartnerName = findViewById(R.id.chatPartnerName)
         chatStatus = findViewById(R.id.chatStatus)
@@ -83,14 +67,10 @@ class ChatActivity : AppCompatActivity() {
         }
         Log.d("ChatActivity", "Chat dibuka dengan ID: $chatId")
 
-        val currentUserEmail = auth.currentUser?.email ?: ""
         recyclerView.layoutManager = LinearLayoutManager(this)
-        chatAdapter = ChatAdapter(messages, currentUserEmail) { imageUrl ->
-            val intent = Intent(this, PhotoViewActivity::class.java)
-            intent.putExtra("imageUrl", imageUrl)
-            startActivity(intent)
-        }
 
+        val currentUserEmail = auth.currentUser?.email ?: return
+        chatAdapter = ChatAdapter(messages, currentUserEmail)
         recyclerView.adapter = chatAdapter
 
 
@@ -123,13 +103,9 @@ class ChatActivity : AppCompatActivity() {
 
         monitorChatStatus()
 
-        imageButtonUpload.setOnClickListener {
-            showImagePickerDialog()
-        }
-
         sendButton.setOnClickListener {
             val text = messageEditText.text.toString()
-            chatViewModel.sendMessage(chatId!!, text, this)
+            chatViewModel.sendMessage(chatId!!, currentUserEmail, text, false, this)
             messageEditText.text.clear()
         }
 
@@ -179,20 +155,6 @@ class ChatActivity : AppCompatActivity() {
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (resultCode == Activity.RESULT_OK) {
-            if (requestCode == PICK_IMAGE_REQUEST && data != null) {
-                val imageUri = data.data
-                uploadImage(imageUri)
-            } else if (requestCode == CAMERA_REQUEST && data != null) {
-                val imageBitmap = data.extras?.get("data") as Bitmap
-                val imageUri = getImageUriFromBitmap(imageBitmap)
-                uploadImage(imageUri)
-            }
-        }
-    }
-
     private fun updateFCMToken() {
         FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
             val user = FirebaseAuth.getInstance().currentUser
@@ -232,75 +194,6 @@ class ChatActivity : AppCompatActivity() {
             }
     }
 
-    private fun forwardMessage() {
-        chatViewModel.forwardMessage(firestore, chatId!!) { success, doctorList ->
-            if (!success || doctorList == null) {
-                Toast.makeText(this, "Tidak ada dokter tersedia.", Toast.LENGTH_SHORT).show()
-                return@forwardMessage
-            }
-
-            ChatHelper.showDoctorSelectionDialog(this, doctorList) { doctorEmail ->
-                createNewChatWithDoctor(doctorEmail)
-            }
-        }
-    }
-
-    private fun getImageUriFromBitmap(bitmap: Bitmap): Uri {
-        val bytes = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bytes)
-        val path = MediaStore.Images.Media.insertImage(contentResolver, bitmap, "IMG_" + System.currentTimeMillis(), null)
-        return Uri.parse(path)
-    }
-
-    private fun uploadImage(imageUri: Uri?) {
-        if (imageUri == null) return
-
-        val fileRef = storageReference.child("${System.currentTimeMillis()}.jpg")
-        fileRef.putFile(imageUri)
-            .addOnSuccessListener {
-                fileRef.downloadUrl.addOnSuccessListener { uri ->
-                    sendImageMessage(uri.toString())
-                }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Upload gagal", Toast.LENGTH_SHORT).show()
-            }
-    }
-
-    private fun sendImageMessage(imageUrl: String) {
-        val message = mapOf(
-            "senderEmail" to auth.currentUser?.email,
-            "imageUrl" to imageUrl,
-            "timestamp" to System.currentTimeMillis()
-        )
-
-        firestore.collection("chats").document(chatId!!)
-            .collection("messages").add(message)
-    }
-
-    private fun showImagePickerDialog() {
-        val options = arrayOf("Ambil Foto", "Pilih dari Galeri")
-        AlertDialog.Builder(this)
-            .setTitle("Upload Gambar")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> openCamera()
-                    1 -> openGallery()
-                }
-            }
-            .show()
-    }
-
-    private fun openCamera() {
-        val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-        startActivityForResult(intent, CAMERA_REQUEST)
-    }
-
-    private fun openGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(intent, PICK_IMAGE_REQUEST)
-    }
-
     private fun monitorChatStatus() {
         firestore.collection("chats").document(chatId!!)
             .addSnapshotListener { documentSnapshot, error ->
@@ -314,6 +207,19 @@ class ChatActivity : AppCompatActivity() {
                     chatStatus.text = status
                 }
             }
+    }
+
+    private fun forwardMessage() {
+        chatViewModel.forwardMessage(firestore, chatId!!) { success, doctorList ->
+            if (!success || doctorList == null) {
+                Toast.makeText(this, "Tidak ada dokter tersedia.", Toast.LENGTH_SHORT).show()
+                return@forwardMessage
+            }
+
+            ChatHelper.showDoctorSelectionDialog(this, doctorList) { doctorEmail ->
+                createNewChatWithDoctor(doctorEmail)
+            }
+        }
     }
 
     private fun createNewChatWithDoctor(doctorEmail: String) {
@@ -333,24 +239,9 @@ class ChatActivity : AppCompatActivity() {
             firestore.collection("chats").add(newChat).addOnSuccessListener { documentRef ->
                 val newChatId = documentRef.id
 
-                val initialMessage = mapOf(
-                    "senderEmail" to doctorEmail,
-                    "text" to "Ada yang bisa saya bantu?",
-                    "timestamp" to System.currentTimeMillis()
-                )
+                chatViewModel.sendMessage(newChatId, doctorEmail, "Ada yang bisa saya bantu?", true, this)
 
-                firestore.collection("chats").document(newChatId).collection("messages")
-                    .add(initialMessage).addOnSuccessListener {
-                        if (globalRole == "user") {
-                            val intent = Intent(this, ChatActivity::class.java)
-                            intent.putExtra("chatId", newChatId)
-                            startActivity(intent)
-                            finish()
-                        } else {
-                            Toast.makeText(this, "Chat diteruskan ke dokter.", Toast.LENGTH_SHORT).show()
-                            finish()
-                        }
-                    }
+                Toast.makeText(this, "Chat diteruskan ke dokter.", Toast.LENGTH_SHORT).show()
             }
         }
     }

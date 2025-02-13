@@ -6,6 +6,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -27,6 +28,7 @@ class HomeFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var chatAdapter: HomeAdapter
     private lateinit var startChatButton: FloatingActionButton
+
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 
     override fun onCreateView(
@@ -55,6 +57,16 @@ class HomeFragment : Fragment() {
             val currentEmail = auth.currentUser?.email ?: return@observe
             val filteredChats = chats.filter { chat -> !chat.archivedBy.contains(currentEmail) }
             chatAdapter.updateChats(filteredChats)
+
+            val emptyTextView = view.findViewById<TextView>(R.id.emptyTextView)
+
+            if (filteredChats.isEmpty()) {
+                emptyTextView.visibility = View.VISIBLE
+                recyclerView.visibility = View.GONE
+            } else {
+                emptyTextView.visibility = View.GONE
+                recyclerView.visibility = View.VISIBLE
+            }
         }
 
         viewModel.unreadMessagesCount.observe(viewLifecycleOwner) { unreadCounts ->
@@ -188,7 +200,6 @@ class HomeFragment : Fragment() {
                     }
             }
     }
-
 
     private fun deleteChat(chat: Chat) {
         val currentUser = auth.currentUser ?: return

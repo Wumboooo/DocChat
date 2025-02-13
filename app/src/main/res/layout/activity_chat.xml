@@ -59,18 +59,6 @@
             android:hint="Type your message" />
 
         <ImageButton
-            android:id="@+id/imageButtonUpload"
-            android:layout_width="35dp"
-            android:layout_height="35dp"
-            android:layout_gravity="center"
-            android:layout_margin="4dp"
-            android:src="@drawable/baseline_add_photo_alternate_24"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Upload Image"
-            android:visibility="gone"
-            android:scaleType="fitCenter"/>
-
-        <ImageButton
             android:id="@+id/sendButton"
             android:layout_width="50dp"
             android:layout_height="50dp"

@@ -45,48 +45,15 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
         }
     }
 
-    fun sendMessage(chatId: String, text: String, context: Context) {
-        val senderEmail = auth.currentUser?.email ?: return
-
+    fun sendMessage(chatId: String, senderEmail: String, text: String, isFromDoctor: Boolean, context: Context) {
         chatRepository.sendMessage(chatId, senderEmail, text, context) {
-            checkAndSendNotification(chatId, text, context)
-        }
-    }
-
-    fun markMessagesAsRead(chatId: String) {
-        val currentUserEmail = auth.currentUser?.email ?: return
-        chatRepository.markMessagesAsRead(chatId, currentUserEmail)
-        sentNotifications.remove(chatId)
-    }
-
-    fun setUserActiveInChat(chatId: String, isActive: Boolean) {
-        val currentUserEmail = auth.currentUser?.email ?: return
-        chatRef = firestore.collection("chats").document(chatId)
-
-        firestore.runTransaction { transaction ->
-            val chatSnapshot = transaction.get(chatRef!!)
-            val activeParticipants = chatSnapshot.get("activeParticipants") as? MutableMap<String, Boolean> ?: mutableMapOf()
-
-            if (isActive) {
-                activeParticipants[currentUserEmail] = true
+            if (!isFromDoctor) {
+                checkAndSendNotification(chatId, text, context)
             } else {
-                activeParticipants.remove(currentUserEmail)
-            }
-
-            transaction.update(chatRef!!, "activeParticipants", activeParticipants)
-        }
-    }
-
-    fun monitorActiveParticipants(chatId: String, onUpdate: (Map<String, Boolean>) -> Unit) {
-        chatRef = firestore.collection("chats").document(chatId)
-
-        chatRef!!.addSnapshotListener { snapshot, _ ->
-            if (snapshot != null && snapshot.exists()) {
-                val activeParticipants = snapshot.get("activeParticipants") as? Map<String, Boolean> ?: emptyMap()
-                onUpdate(activeParticipants)
+                sendChatNotification(senderEmail, text, chatId, context)
             }
         }
-    }
+     }
 
     private fun checkAndSendNotification(chatId: String, message: String, context: Context) {
         val currentUserEmail = FirebaseAuth.getInstance().currentUser?.email?.lowercase() ?: return
@@ -124,6 +91,71 @@ class ChatViewModel(private val chatRepository: ChatRepository) : ViewModel() {
 
     }
 
+    fun sendChatNotification(senderEmail: String, message: String, chatId: String, context: Context) {
+        Log.d("Notification", "sending notification from: $senderEmail")
+
+        FirebaseFirestore.getInstance().collection("chats")
+            .document(chatId)
+            .get()
+            .addOnSuccessListener { chatDoc ->
+                val participants = chatDoc.get("participants") as? List<String> ?: emptyList()
+                val recipientEmail = participants.firstOrNull { it.lowercase() != senderEmail }
+
+                if (recipientEmail != null) {
+                    getUserName(senderEmail) { senderName ->
+                        Log.d("Notification", "Sender name resolved: $senderName")
+                        getUserFCMToken(recipientEmail) { fcmToken ->
+                            if (!fcmToken.isNullOrEmpty()) {
+                                sendFCMRequest(fcmToken, senderName, message, chatId, System.currentTimeMillis(), context, recipientEmail)
+                            } else {
+                                Log.w("FCM", "Token tidak ditemukan untuk $recipientEmail")
+                                deleteFCMTokenAndRegenerate(recipientEmail, context, senderName, message, chatId)
+                            }
+                        }
+                    }
+                } else {
+                    Log.w("Notification", "Tidak ada penerima yang valid untuk chatId: $chatId")
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "Gagal mendapatkan data chat: ", e)
+            }
+    }
+
+    fun markMessagesAsRead(chatId: String) {
+        val currentUserEmail = auth.currentUser?.email ?: return
+        chatRepository.markMessagesAsRead(chatId, currentUserEmail)
+        sentNotifications.remove(chatId)
+    }
+
+    fun setUserActiveInChat(chatId: String, isActive: Boolean) {
+        val currentUserEmail = auth.currentUser?.email ?: return
+        chatRef = firestore.collection("chats").document(chatId)
+
+        firestore.runTransaction { transaction ->
+            val chatSnapshot = transaction.get(chatRef!!)
+            val activeParticipants = chatSnapshot.get("activeParticipants") as? MutableMap<String, Boolean> ?: mutableMapOf()
+
+            if (isActive) {
+                activeParticipants[currentUserEmail] = true
+            } else {
+                activeParticipants.remove(currentUserEmail)
+            }
+
+            transaction.update(chatRef!!, "activeParticipants", activeParticipants)
+        }
+    }
+
+    fun monitorActiveParticipants(chatId: String, onUpdate: (Map<String, Boolean>) -> Unit) {
+        chatRef = firestore.collection("chats").document(chatId)
+
+        chatRef!!.addSnapshotListener { snapshot, _ ->
+            if (snapshot != null && snapshot.exists()) {
+                val activeParticipants = snapshot.get("activeParticipants") as? Map<String, Boolean> ?: emptyMap()
+                onUpdate(activeParticipants)
+            }
+        }
+    }
 
     private fun getUserFCMToken(email: String, callback: (String?) -> Unit) {
         val firestore = FirebaseFirestore.getInstance()
